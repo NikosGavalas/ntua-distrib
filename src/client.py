@@ -4,6 +4,10 @@ import sys
 import signal
 from config import *
 import logger as lg
+import message as msg
+
+from peers import *
+
 
 def sig_handler(sig, frame):
 	lg.info('exiting...')
@@ -16,8 +20,12 @@ class Client:
 		self.ip = ip
 		self.port = port
 		self.username = username
-		
-	def askTracker(self, msg):
+
+		self.uid = self.register()
+
+		self.groups = []
+
+	def askTracker(self, message):
 		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 			try:
 				sock.connect((TRACKER_IP, TRACKER_PORT))
@@ -25,18 +33,54 @@ class Client:
 				lg.error('connection with tracker refused')
 				sys.exit()
 
-			sock.send(msg.encode())
+			lg.debug('asking tracker: %s' % (message))
+
+			sock.send(message.encode())
 
 			reply_raw = sock.recv(4096)
 			reply = reply_raw.decode()
 
-			lg.debug('tracker reply:\n%s' % (reply))
+			lg.debug('tracker reply: %s' % (reply))
 
 			sock.close()
 
-	def requestGroups(self):
-		self.askTracker('gimme groups')
+			return reply
 
+	def register(self):
+		cont = {'Ip': self.ip, 'Port': self.port, 'Username': self.username}
+		req = msg.forgeRequest(msg.RequestType['Register'], cont)
+
+		status, content = msg.parseReply(self.askTracker(req))
+
+		return content
+
+	def listGroups(self):
+		req = msg.forgeRequest(msg.RequestType['ListGroups'], '')
+
+		status, content = msg.parseReply(self.askTracker(req))
+
+		return content
+
+	def listMembers(self, group):
+		cont = {'Group': group}
+		req = msg.forgeRequest(msg.RequestType['ListMembers'], cont)
+
+		status, content = msg.parseReply(self.askTracker(req))
+
+		return [peer['Username'] for peer in content]
+
+	def joinGroup(self, group):
+		cont = {'Id': self.uid, 'Group': group}
+		req = msg.forgeRequest(msg.RequestType['JoinGroup'], cont)
+
+		status, content = msg.parseReply(self.askTracker(req))
+		
+		newGroup = Group(group)
+
+		for peer in content:
+			newGroup.addMember(Member(peer['Ip'], peer['Port'], peer['Username']))
+		
+		self.groups.append(newGroup)
 
 
 def parseArgs(args):
@@ -60,28 +104,43 @@ if __name__ == '__main__':
 	% (ip, port, username))
 	
 	while True:
-		inp = input('[%s]> ' % (username))
+		inp = input('\n[%s]> ' % (username))
 		
 		if inp.startswith('!lg'):
-			client.requestGroups()
+			groups = client.listGroups()
+			print('groups: %s' % (groups))
 		
 		elif inp.startswith('!lm'):
-			print('ok')
+			try:
+				group = inp.split()[1]
+			except IndexError:
+				print('usage: !lm <group>')
+				continue
+
+			members = client.listMembers(group)
+			print('members in "%s": %s' % (group, members))
 
 		elif inp.startswith('!j'):
+			try:
+				group = inp.split()[1]
+			except IndexError:
+				print('usage: !j <group>')
+				continue
+
+			client.joinGroup(group)
+			print('joining group %s' % (group))
+
+		elif inp.startswith('!w'): # leave last
 			print('ok')
 
-		elif inp.startswith('!w'):
+		elif inp.startswith('!e'): # TODO
 			print('ok')
 
-		elif inp.startswith('!e'):
-			print('ok')
-
-		elif inp.startswith('!q'):
+		elif inp.startswith('!q'): # TODO
 			print('ok')
 
 		#elif inp.startswith('!h'):
 		#	help?
 
 		else:
-			lg.error('invalid ui command')
+			print('invalid ui command')

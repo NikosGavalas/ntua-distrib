@@ -1,15 +1,42 @@
 
-from config import *
 import socket
-import logger as lg
 import sys
+import signal
+from config import *
+import logger as lg
+
+def sig_handler(sig, frame):
+	lg.info('exiting...')
+	sys.exit(0)
+
+signal.signal(signal.SIGINT, sig_handler)
 
 class Client:
-	
 	def __init__(self, ip, port, username):
 		self.ip = ip
 		self.port = port
 		self.username = username
+		
+	def askTracker(self, msg):
+		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+			try:
+				sock.connect((TRACKER_IP, TRACKER_PORT))
+			except ConnectionRefusedError:
+				lg.error('connection with tracker refused')
+				sys.exit()
+
+			sock.send(msg.encode())
+
+			reply_raw = sock.recv(4096)
+			reply = reply_raw.decode()
+
+			lg.debug('tracker reply:\n%s' % (reply))
+
+			sock.close()
+
+	def requestGroups(self):
+		self.askTracker('gimme groups')
+
 
 
 def parseArgs(args):
@@ -21,8 +48,6 @@ def parseArgs(args):
 
 
 if __name__ == '__main__':
-
-	print(sys.argv)
 
 	ip, port, username = parseArgs(sys.argv)
 
@@ -36,9 +61,9 @@ if __name__ == '__main__':
 	
 	while True:
 		inp = input('[%s]> ' % (username))
-
+		
 		if inp.startswith('!lg'):
-			print('ok')
+			client.requestGroups()
 		
 		elif inp.startswith('!lm'):
 			print('ok')

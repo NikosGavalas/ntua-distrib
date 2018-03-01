@@ -9,14 +9,6 @@ import logger as lg
 import message as msg
 from peers import Member, Group
 
-
-def sig_handler(sig, frame):
-	lg.info('exiting...')
-	sys.exit(0)
-
-signal.signal(signal.SIGINT, sig_handler)
-
-
 class TCPServer:
 	def __init__(self, ip, port, backlog):
 		self.ip = ip
@@ -32,7 +24,9 @@ class TCPServer:
 			lg.error('port binding failure')
 
 		self.socket.listen(self.backlog)
-		lg.debug('tracker listening on port ' + str(self.port))
+
+	def getSocket(self):
+		return self.socket
 
 	def __enter__(self):
 		return self.socket
@@ -47,19 +41,25 @@ class Tracker:
 		self.port = port
 		self.backlog = backlog
 		
-		self.groups = [Group('asdf'), Group('qwer')]
+		self.groups = []
 		self.members = []
 
+		server = TCPServer(self.ip, self.port, self.backlog)
+		self.sock = server.getSocket()
+		lg.info('tracker listening on %s:%s' % (self.ip, str(self.port)))
+
 	def serve(self):
-		with TCPServer(self.ip, self.port, self.backlog) as sock:
-			while True:
-				clientSock, clientAddr = sock.accept()
-				lg.debug('connection accepted from ' + clientAddr[0] + ':' + str(clientAddr[1]))
+		while True:
+			clientSock, clientAddr = self.sock.accept()
+			lg.debug('connection accepted from ' + clientAddr[0] + ':' + str(clientAddr[1]))
 
-				thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
+			thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
 
-				thread.start()
-				#thread.join()
+			thread.start()
+			#thread.join()
+
+	def exit(self):
+		self.sock.close()
 
 	def handleRequest(self, conn, addr):
 		data = conn.recv(4096)
@@ -97,32 +97,58 @@ class Tracker:
 			return msg.forgeReply(True, [str(group) for group in self.groups])
 
 		if reqType == msg.RequestType['ListMembers']:
-			group = reqContent['Group']
+			groupname = reqContent['Group']
 
-			idx = self.getIndexGroup(group)
+			group = self.getGroupByName(groupname)
+				
+			ret = [member.toDict() for member in group.getMembers()] if group is not None else []
 
-			ret = self.groups[idx].getMembers()
+			return msg.forgeReply(True, ret)
 
-			return msg.forgeReply(True, [member.toDict() for member in ret])
 
 		if reqType == msg.RequestType['JoinGroup']:
 			uid = reqContent['Id']
-			group = reqContent['Group']
+			groupname = reqContent['Group']
+
+			member = self.getMemberById(uid)
+			group = self.getGroupByName(groupname)
+
+			if group is None:
+				group = Group(groupname)
+				self.groups.append(group)
+
+			if member not in group.getMembers():
+				group.addMember(member)
+
+			return msg.forgeReply(True, [member.toDict() for member in group.getMembers()]) # TODO: exact code is above, group 'em
+		
+		if reqType == msg.RequestType['ExitGroup']:
+			uid = reqContent['Id']
+			groupname = reqContent['Group']
 
 			member = self.getMemberById(uid)
 
-			idx = self.getIndexGroup(group) # <-- maybe turn this function into getGroupByName?
+			self.getGroupByName(groupname).removeMember(member)
 
-			if idx >= 0:
-				self.groups[idx].addMember(member)
-			else:
-				newGroup = Group(group)
-				newGroup.addMember(member)
-				self.groups.append(newGroup)
+			return msg.forgeReply(True, '')
 
-			return msg.forgeReply(True, [member.toDict() for member in self.groups[idx].getMembers()]) # <-- TODO: exact code is above, use a func
-		
-		# return 'you fucked up'
+		if reqType == msg.RequestType['Quit']:
+			uid = reqContent['Id']
+
+			member = self.getMemberById(uid)
+
+			# remove member from all groups
+			for group in self.groups:
+				try:
+					group.removeMember(member)
+				except ValueError:
+					pass
+				
+			del member
+
+			return msg.forgeReply(True, '')
+
+		return msg.forgeReply(False, '')
 
 	def getMemberById(self, uid):
 		for member in self.members:
@@ -136,8 +162,21 @@ class Tracker:
 				return idx
 		return -1
 
+	def getGroupByName(self, groupname):
+		for group in self.groups:
+			if group.getName() == groupname:
+				return group
+		return None
+
 
 if __name__ == '__main__':
 	tracker = Tracker(TRACKER_IP, TRACKER_PORT, TRACKER_BACKLOG)
+
+	def sig_handler(sig, frame):
+		lg.info('exiting...')
+		tracker.exit()
+		sys.exit(0)
+
+	signal.signal(signal.SIGINT, sig_handler)
 
 	tracker.serve()

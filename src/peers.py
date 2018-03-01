@@ -1,6 +1,7 @@
 
 from hashlib import sha256
 
+
 class Member:
 	def __init__(self, ip, port, username):
 		self.ip = ip
@@ -14,6 +15,15 @@ class Member:
 
 		return self.uid
 
+	def getIp(self):
+		return self.ip
+
+	def getPort(self):
+		return self.port
+
+	def getUsername(self):
+		return self.username
+
 	def toDict(self):
 		return {'Ip': self.ip, 'Port': self.port, 'Username': self.username, 'Uid': self.getUid()}
 
@@ -26,8 +36,17 @@ class Group:
 	def addMember(self, member):
 		self.members.append(member)
 
+	def removeMember(self, member):
+		self.members.remove(member)
+
 	def getMembers(self):
 		return self.members
+
+	def clearMembers(self):
+		self.members.clear()
+
+	def getName(self):
+		return self.name
 
 	def __str__(self):
 		return self.name

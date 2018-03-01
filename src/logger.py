@@ -10,6 +10,10 @@ def debug(message):
 	if DEBUG:
 		print(formatLog('DEBUG', message))
 
+def distinct(message):
+	if DEBUG:
+		print('\n>>>>>>>>>\n%s\n>>>>>>>>>\n' % str(message))
+
 def error(message):
 	print(formatLog('ERROR', message))
 

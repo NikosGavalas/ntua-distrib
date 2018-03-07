@@ -149,19 +149,19 @@ class Client:
 			if inp == '\n':
 				return
 
-			self.multicast(msg.MessageType["Application"], inp.strip("\n"))
+			if self.selectedGroup is None:
+				print('you need to select a group first')
+				return
+			
+			self.multicastInGroup(self.selectedGroup, msg.MessageType["Application"], inp.strip("\n"))
 
-	def multicast(self, typ, message):
-		if self.selectedGroup is None:
-			print('you need to select a group first')
-			return
+	def multicastInGroup(self, group, typ, message):
+		for member in group.getMembers():
+			self.unicastInGroup(group, member, typ, message)
 
-		for member in self.selectedGroup.getMembers():
-			self.unicast(member, typ, message)
-
-	def unicast(self, member, typ, content):
+	def unicastInGroup(self, group, member, typ, content):
 		message = msg.Message(typ,
-							self.selectedGroup.name, 
+							group.getName(),
 							self.username, 
 							content,
 							self.address[0],
@@ -288,23 +288,30 @@ class Client:
 			group.addMember(mem)
 			
 			"""Send Hello message"""
-			self.unicast(mem, msg.MessageType['Hello'], '')			
+			self.unicastInGroup(group, mem, msg.MessageType['Hello'], '')			
 
 	def selectGroup(self, groupname):
 		self.selectedGroup = self.groups.getGroupByName(groupname)
 
 	def exitGroup(self, groupname):
+		group = self.groups.getGroupByName(groupname)
+		
+		if group is None:
+			print("you don't belong in that group anyway")
+			return
+
 		cont = {'Username': self.username, 
             	'Group': groupname}
-
 		req = msg.Request(msg.RequestType['ExitGroup'], cont)
 
 		_ = msg.Reply.fromString(self.askTracker(req))
 
-		self.multicast(msg.MessageType['Bye'], '')
+		self.multicastInGroup(group, msg.MessageType['Bye'], '')
 
-		self.groups.removeGroupByName(groupname)
-		self.selectedGroup = None
+		if self.selectedGroup == group:
+			self.selectedGroup = None
+
+		self.groups.removeGroup(group)
 
 	def quit(self):
 		cont = {'Username': self.username}

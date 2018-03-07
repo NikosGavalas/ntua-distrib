@@ -58,6 +58,9 @@ class Groups:
 	def addNewGroup(self, group):
 		self.groups.append(group)
 
+	def removeGroup(self, group):
+		self.groups.remove(group)
+
 	def removeGroupByName(self, groupname):
 		group = self.getGroupByName(groupname)
 		

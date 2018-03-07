@@ -7,19 +7,18 @@ from select import select
 from config import *
 import logger as lg
 import message as msg
-from peers import *
+from peers import Member, Group, Groups, Members
 
 
 class UDPServer:
-	def __init__(self, ip, port):
-		self.ip = ip
-		self.port = port
+	def __init__(self, address):
+		self.address = address
 
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		
 		try:
-			self.socket.bind((self.ip, self.port))
+			self.socket.bind(self.address)
 		except socket.error:
 			lg.error('port binding failure')
 
@@ -36,28 +35,31 @@ class UDPServer:
 
 
 class Client:
-	def __init__(self, ip, port, username):
-		self.ip = ip
-		self.port = port
+	def __init__(self, address, username):
+		self.address = address
 		self.username = username
 
 		self.uid = self.register()
 
-		self.groups = [] # <- can be a seperate class, too many functions
+		self.groups = Groups()
+		self.members = Members()
 
 		self.selectedGroup = None
 
-		server = UDPServer(self.ip, self.port)
+		server = UDPServer(self.address)
 		self.sock = server.getSocket()
-		lg.debug('client listening on %s:%s' % (self.ip, str(self.port)))
+
+		lg.debug('client listening on %s:%s' % self.address)
 
 	def prompt(self):
 		print('[%s]> ' % (username), end='', flush=True)
 		
 	def listen(self):
+		self.prompt()
+		
 		while True:
-			self.prompt()
 
+			# Unix select syscall
 			streams = [self.sock, sys.stdin]
 			inp, _, _ = select(streams, [], [])
 
@@ -68,16 +70,19 @@ class Client:
 					if not data:
 						continue
 
-					self.onReceive(data.decode())
+					if self.onReceive(data.decode()):
+						self.prompt()
 
 				elif stream == sys.stdin:
 					self.onText(sys.stdin.readline())
+					self.prompt()
 
 	def onText(self, inp):
 		if inp.startswith('!'):
 
 			if inp.startswith('!lg'):
-				groups = client.listGroups()
+				groups = self.listGroups()
+
 				print('groups: %s' % (groups))
 				return
 
@@ -88,19 +93,19 @@ class Client:
 					print('usage: !lm <group>')
 					return
 
-				members = client.listMembers(group)
+				members = self.listMembers(group)
 				print('members in "%s": %s' % (group, members))
 				return
 
 			if inp.startswith('!j'):
 				try:
-					group = inp.split()[1]
+					groupname = inp.split()[1]
 				except IndexError:
 					print('usage: !j <group>')
 					return
 
-				client.joinGroup(group)
-				print('joining group %s' % (group))
+				self.joinGroup(groupname)
+				print('joining group %s' % (groupname))
 				return
 
 			if inp.startswith('!w'):
@@ -110,7 +115,7 @@ class Client:
 					print('usage: !w <group>')
 					return
 				
-				client.selectGroup(group)
+				self.selectGroup(group)
 				print('writting in group %s' % (group))
 				return
 
@@ -121,13 +126,13 @@ class Client:
 					print('usage: !e <group>')
 					return
 
-				client.exitGroup(group)
+				self.exitGroup(group)
 				print('leaving group %s' % (group))
 				return
 
 			if inp.startswith('!q'):
-				print('quitting...')
-				client.quit()
+				print('bye')
+				self.quit()
 				sys.exit(0)
 
 			#TODO list groups where current user belongs to
@@ -141,54 +146,87 @@ class Client:
 
 		# Else if input doesnt not start with '!':
 		else:
-			client.multicast(inp)
-		
-		return
+			if inp == '\n':
+				return
 
-	def multicast(self, message):
+			self.multicast(msg.MessageType["Application"], inp.strip("\n"))
+
+	def multicast(self, typ, message):
 		if self.selectedGroup is None:
 			print('you need to select a group first')
 			return
 
 		for member in self.selectedGroup.getMembers():
-			self.unicast(member, message)
+			self.unicast(member, typ, message)
 
-	def unicast(self, member, message):
-		forged = msg.forgeMessage(self.selectedGroup.name, 
-									self.username, message,
-									self.ip,
-									self.port)
+	def unicast(self, member, typ, content):
+		message = msg.Message(typ,
+							self.selectedGroup.name, 
+							self.username, 
+							content,
+							self.address[0],
+							self.address[1])
 		
+		text = str(message)
+
 		with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-			lg.debug('sending %s to %s:%s' % (forged, member.getIp(), member.getPort()))
-			sock.sendto(forged.encode(), (member.getIp(), member.getPort()))
+			lg.debug('sending %s to %s' % (text, member.getAddress()))
+			sock.sendto(text.encode(), member.getAddress())
 
-	def onReceive(self, message):
-		groupname, username, content, srcIp, srcPort = msg.parseMessage(message)
-		lg.debug('received %s from %s:%s' % (message, srcIp, str(srcPort)))
+	def onReceive(self, text):
+		message = msg.Message.fromString(text)
+		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
 
-		group = self.getGroupByName(groupname)
+		group = self.groups.getGroupByName(message.getGroupName())
+		
+		"""If the group doesn't exist, then the message is not for us, so we return"""
+		if group is None:
+			return False
 
-		members = [member.getUsername() for member in group.getMembers()]
+		sender = self.members.getMemberByUsername(message.getUsername())
 
-		if username not in members:
-			group.addMember(Member(srcIp, srcPort, username))
+		"""If we don't already know the sender, we append him in our structs
+		(this was before adding the "hello" and "bye" messages)"""
+		if sender is None:
+			newMem = Member(message.getSrcAddress(), message.getUsername())
+			self.members.addNewMember(newMem)
+			group.addMember(newMem)
 
-		## Add fifo logic here
+		messageType = message.getType()
 
-		print('\nin %s %s says:: %s' % (group, username, content))
+		if messageType == msg.MessageType['Bye']:
+			group.removeMember(sender)
+			return False
+		
+		elif messageType == msg.MessageType['Hello']:
+			return False
+
+		elif messageType == msg.MessageType['Application']:
+
+			## Add fifo logic here
+
+			self.deliverApplicationMessage(message.getGroupName(),
+											message.getUsername(),
+											message.getContent())
+		
+			return True
+
+		return False
+
+	def deliverApplicationMessage(self, groupname, username, content):
+		print('\nin %s %s says:: %s' % (groupname, username, content))
 
 	def askTracker(self, message):
 		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 			try:
-				sock.connect((TRACKER_IP, TRACKER_PORT))
+				sock.connect(TRACKER_ADDR)
 			except ConnectionRefusedError:
 				lg.error('connection with tracker refused')
 				sys.exit(1)
 
 			lg.debug('asking tracker: %s' % (message))
 
-			sock.send(message.encode())
+			sock.send(str(message).encode())
 
 			reply_raw = sock.recv(4096)
 			reply = reply_raw.decode()
@@ -200,68 +238,80 @@ class Client:
 			return reply
 
 	def register(self):
-		cont = {'Ip': self.ip, 'Port': self.port, 'Username': self.username}
-		req = msg.forgeRequest(msg.RequestType['Register'], cont)
+		cont = {'Ip': self.address[0], 
+				'Port': self.address[1], 
+				'Username': self.username}
 
-		status, content = msg.parseReply(self.askTracker(req))
+		req = msg.Request(msg.RequestType['Register'], cont)
 
-		return content
+		reply = msg.Reply.fromString(self.askTracker(req))
+
+		return reply.getContent()
 
 	def listGroups(self):
-		req = msg.forgeRequest(msg.RequestType['ListGroups'], '')
+		cont = {}
 
-		status, content = msg.parseReply(self.askTracker(req))
+		req = msg.Request(msg.RequestType['ListGroups'], cont)
 
-		return content
+		reply = msg.Reply.fromString(self.askTracker(req))
+
+		return reply.getContent()
 
 	def listMembers(self, group):
 		cont = {'Group': group}
-		req = msg.forgeRequest(msg.RequestType['ListMembers'], cont)
 
-		status, content = msg.parseReply(self.askTracker(req))
+		req = msg.Request(msg.RequestType['ListMembers'], cont)
 
-		return [peer['Username'] for peer in content]
+		reply = msg.Reply.fromString(self.askTracker(req))
+
+		return [peer['Username'] for peer in reply.getContent()]
 
 	def joinGroup(self, groupname):
-		cont = {'Id': self.uid, 'Group': groupname}
-		req = msg.forgeRequest(msg.RequestType['JoinGroup'], cont)
+		cont = {'Username': self.username, 
+				'Group': groupname}
 
-		status, content = msg.parseReply(self.askTracker(req))
+		req = msg.Request(msg.RequestType['JoinGroup'], cont) 
+
+		reply = msg.Reply.fromString(self.askTracker(req))
 		
-		group = self.getGroupByName(groupname)
+		group = self.groups.getGroupByName(groupname)
 
 		if group is None:
 			group = Group(groupname)
-			self.groups.append(group)
+			self.groups.addNewGroup(group) 
 
 		group.clearMembers()
 
-		for peer in content:
-			mem = Member(peer['Ip'], peer['Port'], peer['Username'])
+		for peer in reply.getContent():
+			mem = Member((peer['Ip'], int(peer['Port'])), peer['Username'])
+			self.members.addNewMember(mem) # it is bad that I have to add him in two places though
 			group.addMember(mem)
+			
+			"""Send Hello message"""
+			self.unicast(mem, msg.MessageType['Hello'], '')			
 
-	def selectGroup(self, group):
-		self.selectedGroup = self.getGroupByName(group)
+	def selectGroup(self, groupname):
+		self.selectedGroup = self.groups.getGroupByName(groupname)
 
-	# the following method is used by the class tracker too
-	# TODO: DNRY
-	def getGroupByName(self, groupname):
-		for group in self.groups:
-			if group.getName() == groupname:
-				return group
-		return None
+	def exitGroup(self, groupname):
+		cont = {'Username': self.username, 
+            	'Group': groupname}
 
-	def exitGroup(self, group):
-		cont = {'Id': self.uid, 'Group': group}
-		req = msg.forgeRequest(msg.RequestType['ExitGroup'], cont)
+		req = msg.Request(msg.RequestType['ExitGroup'], cont)
 
-		status, content = msg.parseReply(self.askTracker(req))
+		_ = msg.Reply.fromString(self.askTracker(req))
+
+		self.multicast(msg.MessageType['Bye'], '')
+
+		self.groups.removeGroupByName(groupname)
+		self.selectedGroup = None
 
 	def quit(self):
-		cont = {'Id': self.uid}
-		req = msg.forgeRequest(msg.RequestType['Quit'], cont)
+		cont = {'Username': self.username}
 
-		status, content = msg.parseReply(self.askTracker(req))
+		req = msg.Request(msg.RequestType['Quit'], cont)
+
+		_ = msg.Reply.fromString(self.askTracker(req))
 
 		self.sock.close()
 
@@ -276,11 +326,12 @@ if __name__ == '__main__':
 		return (args[1], int(args[2]), args[3])
 
 	ip, port, username = parseArgs(sys.argv)
+	addr = (ip, port)
 
-	client = Client(ip, port, username)
+	client = Client(addr, username)
 
 	def sig_handler(sig, frame):
-		lg.info('exiting...')
+		print('\nbye')
 		client.quit()
 		sys.exit(0)
 

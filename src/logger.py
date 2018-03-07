@@ -8,20 +8,20 @@ def formatLog(level, message):
 
 def debug(message):
 	if DEBUG:
-		print(formatLog('DEBUG', message))
+		print(formatLog('DEBUG', message), flush=True)
 
 def distinct(message):
 	if DEBUG:
-		print('\n>>>>>>>>>\n%s\n>>>>>>>>>\n' % str(message))
-
-def error(message):
-	print(formatLog('ERROR', message))
+		print('\n>>>>>>>>>\n%s\n>>>>>>>>>\n' % str(message), flush=True)
 
 def info(message):
-	print(formatLog('INFO', message))
+	print(formatLog('INFO', message), flush=True)
 
 def warn(message):
-	print(formatLog('WARN', message))
+	print(formatLog('WARN', message), flush=True)
+
+def error(message):
+	print(formatLog('ERROR', message), flush=True)
 
 def fatal(message):
-	print(formatLog('FATAL', message))
+	print(formatLog('FATAL', message), flush=True)

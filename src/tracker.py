@@ -1,25 +1,24 @@
 
 import socket
-import threading
+#import threading
 import signal
 import sys
 
 from config import *
 import logger as lg
 import message as msg
-from peers import Member, Group
+from peers import Member, Group, Groups, Members
 
 class TCPServer:
-	def __init__(self, ip, port, backlog):
-		self.ip = ip
-		self.port = port
+	def __init__(self, address, backlog):
+		self.address = address
 		self.backlog = backlog
 
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 		try:
-			self.socket.bind((self.ip, self.port))
+			self.socket.bind(self.address)
 		except socket.error:
 			lg.error('port binding failure')
 
@@ -36,27 +35,30 @@ class TCPServer:
 
 
 class Tracker:
-	def __init__(self, ip, port, backlog):
-		self.ip = ip
-		self.port = port
+	def __init__(self, address, backlog):
+		self.address = address
 		self.backlog = backlog
 		
-		self.groups = []
-		self.members = []
+		self.groups = Groups()
 
-		server = TCPServer(self.ip, self.port, self.backlog)
+		self.members = Members()
+
+		server = TCPServer(self.address, self.backlog)
 		self.sock = server.getSocket()
-		lg.info('tracker listening on %s:%s' % (self.ip, str(self.port)))
+
+		lg.info('tracker listening on %s:%s' % self.address)
 
 	def serve(self):
 		while True:
 			clientSock, clientAddr = self.sock.accept()
 			lg.debug('connection accepted from ' + clientAddr[0] + ':' + str(clientAddr[1]))
 
-			thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
+			self.handleRequest(clientSock, clientAddr)
 
-			thread.start()
-			#thread.join()
+			# thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
+
+			# thread.start()
+			#thread.join() # is this correct or threads never return?
 
 	def exit(self):
 		self.sock.close()
@@ -65,11 +67,11 @@ class Tracker:
 		data = conn.recv(4096)
 		
 		if data:
-			message = data.decode()
+			req = data.decode()
 
-			lg.debug('received from %s:%s message: %s' % (addr[0], str(addr[1]), message))
+			lg.debug('received from %s:%s : %s' % (addr[0], str(addr[1]), req))
 
-			reply = self.answer(message)
+			reply = str(self.answer(req))
 
 			lg.debug('replying to %s:%s with: %s' % (addr[0], str(addr[1]), reply))
 
@@ -79,98 +81,88 @@ class Tracker:
 		conn.close()
 
 	def answer(self, message):
-		reqType, reqContent = msg.parseRequest(message)
+		req = msg.Request.fromString(message)
+
+		reqType = req.getType()
+		reqContent = req.getContent()
 
 		if reqType == msg.RequestType['Register']:
 			ip = reqContent['Ip']
 			port = reqContent['Port']
 			username = reqContent['Username']
 			
-			newMem = Member(ip, port, username)
-			uid = newMem.getUid()
+			member = self.members.getMemberByUsername(username)
+			
+			if member is None:
+				member = Member((ip, port), username)
+				self.members.addNewMember(member)
 
-			self.members.append(newMem)
+			uid = member.getUid()
 
-			return msg.forgeReply(True, uid)
+			return msg.Reply(True, uid)
 
 		if reqType == msg.RequestType['ListGroups']:
-			return msg.forgeReply(True, [str(group) for group in self.groups])
+			return msg.Reply(True, self.groups.getGroupsSerializable())
 
 		if reqType == msg.RequestType['ListMembers']:
 			groupname = reqContent['Group']
 
-			group = self.getGroupByName(groupname)
-				
-			ret = [member.toDict() for member in group.getMembers()] if group is not None else []
+			group = self.groups.getGroupByName(groupname)
 
-			return msg.forgeReply(True, ret)
+			if group is None:
+				return msg.Reply(False, [])
+
+			return msg.Reply(True, group.getMembersSerializable())
 
 
 		if reqType == msg.RequestType['JoinGroup']:
-			uid = reqContent['Id']
+			username = reqContent['Username']
 			groupname = reqContent['Group']
 
-			member = self.getMemberById(uid)
-			group = self.getGroupByName(groupname)
+			member = self.members.getMemberByUsername(username)
+
+			if member is None:
+				return msg.Reply(False, [])
+			
+			group = self.groups.getGroupByName(groupname)
 
 			if group is None:
 				group = Group(groupname)
-				self.groups.append(group)
+				self.groups.addNewGroup(group)
 
-			if member not in group.getMembers():
-				group.addMember(member)
+			group.addMember(member)
 
-			return msg.forgeReply(True, [member.toDict() for member in group.getMembers()]) # TODO: exact code is above, group 'em
+			return msg.Reply(True, group.getMembersSerializable())
 		
 		if reqType == msg.RequestType['ExitGroup']:
-			uid = reqContent['Id']
+			username = reqContent['Username']
 			groupname = reqContent['Group']
 
-			member = self.getMemberById(uid)
+			member = self.members.getMemberByUsername(username)
 
-			self.getGroupByName(groupname).removeMember(member)
+			group = self.groups.getGroupByName(groupname)
 
-			return msg.forgeReply(True, '')
+			if group is not None:
+				group.removeMember(member)
+
+			return msg.Reply(True, '')
 
 		if reqType == msg.RequestType['Quit']:
-			uid = reqContent['Id']
+			username = reqContent['Username']
 
-			member = self.getMemberById(uid)
+			member = self.members.getMemberByUsername(username)
 
-			# remove member from all groups
-			for group in self.groups:
-				try:
-					group.removeMember(member)
-				except ValueError:
-					pass
+			self.groups.removeMemberFromAllGroups(member)
 				
-			del member
+			self.members.deleteMember(member)
 
-			return msg.forgeReply(True, '')
+			return msg.Reply(True, '')
 
-		return msg.forgeReply(False, '')
-
-	def getMemberById(self, uid):
-		for member in self.members:
-			if member.uid == uid:
-				return member
-		return None
-
-	def getIndexGroup(self, targetGroup): # <-- there is a built-in class for this, I think index but whatev
-		for idx, group in enumerate(self.groups):
-			if group.name == targetGroup:
-				return idx
-		return -1
-
-	def getGroupByName(self, groupname):
-		for group in self.groups:
-			if group.getName() == groupname:
-				return group
-		return None
+		return msg.Reply(False, '')
 
 
 if __name__ == '__main__':
-	tracker = Tracker(TRACKER_IP, TRACKER_PORT, TRACKER_BACKLOG)
+	tracker = Tracker(TRACKER_ADDR, TRACKER_BACKLOG)
 
 	def sig_handler(sig, frame):
 		lg.info('exiting...')

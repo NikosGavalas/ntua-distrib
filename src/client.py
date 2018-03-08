@@ -46,6 +46,8 @@ class Client:
 
 		self.selectedGroup = None
 
+		self.counter = 0
+
 		server = UDPServer(self.address)
 		self.sock = server.getSocket()
 
@@ -135,6 +137,9 @@ class Client:
 				self.quit()
 				sys.exit(0)
 
+			#TODO flush buffers
+			#elif inp.startswith('!f'):
+
 			#TODO list groups where current user belongs to
 			#elif inp.startswith('!mg'):
 
@@ -153,19 +158,23 @@ class Client:
 				print('you need to select a group first')
 				return
 			
-			self.multicastInGroup(self.selectedGroup, msg.MessageType["Application"], inp.strip("\n"))
+			self.multicastInGroup(self.selectedGroup, msg.MessageType.Application, inp.strip("\n"))
 
 	def multicastInGroup(self, group, typ, message):
-		for member in group.getMembers():
-			self.unicastInGroup(group, member, typ, message)
+		if typ == msg.MessageType.Application:
+			self.counter = self.counter + 1
 
-	def unicastInGroup(self, group, member, typ, content):
+		for member in group.getMembers():
+			self.unicastInGroup(group, member, typ, message, self.counter)
+
+	def unicastInGroup(self, group, member, typ, content, counter):
 		message = msg.Message(typ,
-							group.getName(),
-							self.username, 
-							content,
-							self.address[0],
-							self.address[1])
+		                      group.getName(),
+		                      self.username, 
+		                      content,
+		                      self.address[0],
+		                      self.address[1],
+		                      counter)
 		
 		text = str(message)
 
@@ -173,6 +182,7 @@ class Client:
 			lg.debug('sending %s to %s' % (text, member.getAddress()))
 			sock.sendto(text.encode(), member.getAddress())
 
+	"""Returns true if message has been delivered to the application layer"""
 	def onReceive(self, text):
 		message = msg.Message.fromString(text)
 		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
@@ -188,28 +198,44 @@ class Client:
 		"""If we don't already know the sender, we append him in our structs
 		(this was before adding the "hello" and "bye" messages)"""
 		if sender is None:
-			newMem = Member(message.getSrcAddress(), message.getUsername())
-			self.members.addNewMember(newMem)
-			group.addMember(newMem)
+			sender = Member(message.getSrcAddress(), message.getUsername())
+			self.members.addNewMember(sender)
+			group.addMember(sender)
 
 		messageType = message.getType()
 
-		if messageType == msg.MessageType['Bye']:
+		if messageType == msg.MessageType.Bye:
 			group.removeMember(sender)
 			return False
 		
-		elif messageType == msg.MessageType['Hello']:
+		elif messageType == msg.MessageType.Hello:
+			group.addMember(sender)
 			return False
 
-		elif messageType == msg.MessageType['Application']:
+		elif messageType == msg.MessageType.Application:
 
-			## Add fifo logic here
+			#if sender.hasNotReceivedAnythingYet():
+			#	sender.initializeCounter(message.getCounter())
 
+			"""FIFO logic here. We assume that when a client joins a group,
+			the initial value of the counter for his peer's messages is set 
+			to the first value he receives"""
+			#if message.getCounter() == sender.getCounterForGroup(group) + 1:
+				# Accept the message
+			#sender.incrementCounterForGroup(group)
 			self.deliverApplicationMessage(message.getGroupName(),
-											message.getUsername(),
-											message.getContent())
+				                               message.getUsername(),
+				                               message.getContent())
+
+				#debuff = sender.tryDebuffMessage()
+				#while debuff is not None:
+				#	debuff = sender.tryDebuffMessage()
 		
 			return True
+			
+			#else:
+			#	lg.debug('buffering message, counter is %s, sender has %s' % (message.getCounter(), sender.getCounter()))
+				# sender.bufferMessage(message)
 
 		return False
 
@@ -239,10 +265,10 @@ class Client:
 
 	def register(self):
 		cont = {'Ip': self.address[0], 
-				'Port': self.address[1], 
-				'Username': self.username}
+		        'Port': self.address[1], 
+		        'Username': self.username}
 
-		req = msg.Request(msg.RequestType['Register'], cont)
+		req = msg.Request(msg.RequestType.Register, cont)
 
 		reply = msg.Reply.fromString(self.askTracker(req))
 
@@ -251,7 +277,7 @@ class Client:
 	def listGroups(self):
 		cont = {}
 
-		req = msg.Request(msg.RequestType['ListGroups'], cont)
+		req = msg.Request(msg.RequestType.ListGroups, cont)
 
 		reply = msg.Reply.fromString(self.askTracker(req))
 
@@ -260,7 +286,7 @@ class Client:
 	def listMembers(self, group):
 		cont = {'Group': group}
 
-		req = msg.Request(msg.RequestType['ListMembers'], cont)
+		req = msg.Request(msg.RequestType.ListMembers, cont)
 
 		reply = msg.Reply.fromString(self.askTracker(req))
 
@@ -268,9 +294,9 @@ class Client:
 
 	def joinGroup(self, groupname):
 		cont = {'Username': self.username, 
-				'Group': groupname}
+		        'Group': groupname}
 
-		req = msg.Request(msg.RequestType['JoinGroup'], cont) 
+		req = msg.Request(msg.RequestType.JoinGroup, cont) 
 
 		reply = msg.Reply.fromString(self.askTracker(req))
 		
@@ -288,7 +314,7 @@ class Client:
 			group.addMember(mem)
 			
 			"""Send Hello message"""
-			self.unicastInGroup(group, mem, msg.MessageType['Hello'], '')			
+			self.unicastInGroup(group, mem, msg.MessageType.Hello, '', self.counter)			
 
 	def selectGroup(self, groupname):
 		self.selectedGroup = self.groups.getGroupByName(groupname)
@@ -297,16 +323,16 @@ class Client:
 		group = self.groups.getGroupByName(groupname)
 		
 		if group is None:
-			print("you don't belong in that group anyway")
+			print("well you don't belong in that group anyway")
 			return
 
 		cont = {'Username': self.username, 
             	'Group': groupname}
-		req = msg.Request(msg.RequestType['ExitGroup'], cont)
+		req = msg.Request(msg.RequestType.ExitGroup, cont)
 
 		_ = msg.Reply.fromString(self.askTracker(req))
 
-		self.multicastInGroup(group, msg.MessageType['Bye'], '')
+		self.multicastInGroup(group, msg.MessageType.Bye, '')
 
 		if self.selectedGroup == group:
 			self.selectedGroup = None
@@ -316,7 +342,7 @@ class Client:
 	def quit(self):
 		cont = {'Username': self.username}
 
-		req = msg.Request(msg.RequestType['Quit'], cont)
+		req = msg.Request(msg.RequestType.Quit, cont)
 
 		_ = msg.Reply.fromString(self.askTracker(req))
 

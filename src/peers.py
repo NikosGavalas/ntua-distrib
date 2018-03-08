@@ -2,6 +2,8 @@
 from hashlib import sha256
 
 
+# instead of using these java-like methods, I should probably use "static" class properties
+
 class Member:
 	def __init__(self, address, username):
 		self.address = address
@@ -9,6 +11,12 @@ class Member:
 
 		concat = self.address[0] + str(self.address) + self.username
 		self.uid = sha256(concat.encode()).hexdigest()[:10] # <-- yeah this is bad, I know
+
+		self.counters = []
+
+		#self.isUninitialized = True
+
+		self.messageBuffer = []
 
 	def getUid(self):
 		return self.uid
@@ -19,8 +27,31 @@ class Member:
 	def getUsername(self):
 		return self.username
 
+	def getCounter(self):
+		return self.counter
+	
+	def incrementCounter(self):
+		self.counter = self.counter + 1
+
+	def initializeCounter(self, value):
+		self.counter = value
+
+	#def hasNotReceivedAnythingYet(self):
+	#	return self.isUninitialized
+
+	#def firstMessageReceived(self):
+	#	self.isUninitialized = False
+
+	#def bufferMessage(self, message):
+
+	#def tryDebuffMessage(self):
+		
+
 	def toDict(self):
 		return {'Ip': self.address[0], 'Port': self.address[1], 'Username': self.username, 'Uid': self.uid}
+
+	def __eq__(self, other):
+		return self.username == other.username
 
 
 class Group:
@@ -36,7 +67,8 @@ class Group:
 		return [member.toDict() for member in self.members]
 
 	def removeMember(self, member):
-		self.members.remove(member)
+		if member in self.members:
+			self.members.remove(member)
 
 	def getMembers(self):
 		return self.members
@@ -88,7 +120,8 @@ class Members:
 		self.members = []
 
 	def addNewMember(self, newMem):
-		self.members.append(newMem)
+		if newMem not in self.members:
+			self.members.append(newMem)
 
 	def getMemberByUsername(self, username):
 		for member in self.members:

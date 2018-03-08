@@ -86,7 +86,7 @@ class Tracker:
 		reqType = req.getType()
 		reqContent = req.getContent()
 
-		if reqType == msg.RequestType['Register']:
+		if reqType == msg.RequestType.Register:
 			ip = reqContent['Ip']
 			port = reqContent['Port']
 			username = reqContent['Username']
@@ -101,10 +101,10 @@ class Tracker:
 
 			return msg.Reply(True, uid)
 
-		if reqType == msg.RequestType['ListGroups']:
+		if reqType == msg.RequestType.ListGroups:
 			return msg.Reply(True, self.groups.getGroupsSerializable())
 
-		if reqType == msg.RequestType['ListMembers']:
+		if reqType == msg.RequestType.ListMembers:
 			groupname = reqContent['Group']
 
 			group = self.groups.getGroupByName(groupname)
@@ -115,7 +115,7 @@ class Tracker:
 			return msg.Reply(True, group.getMembersSerializable())
 
 
-		if reqType == msg.RequestType['JoinGroup']:
+		if reqType == msg.RequestType.JoinGroup:
 			username = reqContent['Username']
 			groupname = reqContent['Group']
 
@@ -134,7 +134,7 @@ class Tracker:
 
 			return msg.Reply(True, group.getMembersSerializable())
 		
-		if reqType == msg.RequestType['ExitGroup']:
+		if reqType == msg.RequestType.ExitGroup:
 			username = reqContent['Username']
 			groupname = reqContent['Group']
 
@@ -147,7 +147,7 @@ class Tracker:
 
 			return msg.Reply(True, '')
 
-		if reqType == msg.RequestType['Quit']:
+		if reqType == msg.RequestType.Quit:
 			username = reqContent['Username']
 
 			member = self.members.getMemberByUsername(username)

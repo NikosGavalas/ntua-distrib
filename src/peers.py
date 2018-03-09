@@ -12,7 +12,7 @@ class Member:
 		concat = self.address[0] + str(self.address) + self.username
 		self.uid = sha256(concat.encode()).hexdigest()[:10] # <-- yeah this is bad, I know
 
-		self.counters = []
+		self.counters = {}
 
 		#self.isUninitialized = True
 
@@ -27,17 +27,29 @@ class Member:
 	def getUsername(self):
 		return self.username
 
-	def getCounter(self):
-		return self.counter
+	#def getCounter(self):
+	#	return self.counter
 	
-	def incrementCounter(self):
-		self.counter = self.counter + 1
+	#def incrementCounter(self):
+	#	self.counter = self.counter + 1
 
-	def initializeCounter(self, value):
-		self.counter = value
+	#def initializeCounter(self, value):
+	#	self.counter = value
 
-	#def hasNotReceivedAnythingYet(self):
-	#	return self.isUninitialized
+	def initializeCounterForGroup(self, value, group):
+		self.counters[group] = value
+
+	def getCounterForGroup(self, group):
+		try:
+			return self.counters[group]
+		except KeyError:
+			return 0
+
+	def incrementCounterForGroup(self, group):
+		self.counters[group] = self.counters[group] + 1
+
+	def resetCounterForGroup(self, group):
+		self.counters[group] = 0
 
 	#def firstMessageReceived(self):
 	#	self.isUninitialized = False
@@ -45,7 +57,7 @@ class Member:
 	#def bufferMessage(self, message):
 
 	#def tryDebuffMessage(self):
-		
+
 
 	def toDict(self):
 		return {'Ip': self.address[0], 'Port': self.address[1], 'Username': self.username, 'Uid': self.uid}
@@ -58,6 +70,7 @@ class Group:
 	def __init__(self, name):
 		self.name = name
 		self.members = []
+		self.counter = 0
 
 	def addMember(self, member):
 		if member not in self.getMembers():
@@ -79,8 +92,17 @@ class Group:
 	def getName(self):
 		return self.name
 
+	def getCounter(self):
+		return self.counter
+
 	def __str__(self):
 		return self.name
+
+	def __eq__(self, other):
+		return self.name == other.name
+
+	def __hash__(self):
+		return hash(self.name)
 
 
 class Groups:

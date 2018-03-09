@@ -206,24 +206,34 @@ class Client:
 
 		if messageType == msg.MessageType.Bye:
 			group.removeMember(sender)
+			sender.resetCounterForGroup(group)
 			return False
 		
 		elif messageType == msg.MessageType.Hello:
 			group.addMember(sender)
+			sender.initializeCounterForGroup(message.getCounter(), group)
+			sender.incrementCounterForGroup(group)
 			return False
 
 		elif messageType == msg.MessageType.Application:
 
-			#if sender.hasNotReceivedAnythingYet():
-			#	sender.initializeCounter(message.getCounter())
+			if group.getCounter() == 0:
+				sender.initializeCounterForGroup(message.getCounter(), group)
+
+				sender.incrementCounterForGroup(group)
+				self.deliverApplicationMessage(message.getGroupName(),
+				                               message.getUsername(),
+				                               message.getContent())
+
+				return True
 
 			"""FIFO logic here. We assume that when a client joins a group,
 			the initial value of the counter for his peer's messages is set 
 			to the first value he receives"""
-			#if message.getCounter() == sender.getCounterForGroup(group) + 1:
+			if message.getCounter() == sender.getCounterForGroup(group) + 1:
 				# Accept the message
-			#sender.incrementCounterForGroup(group)
-			self.deliverApplicationMessage(message.getGroupName(),
+				sender.incrementCounterForGroup(group)
+				self.deliverApplicationMessage(message.getGroupName(),
 				                               message.getUsername(),
 				                               message.getContent())
 
@@ -231,10 +241,10 @@ class Client:
 				#while debuff is not None:
 				#	debuff = sender.tryDebuffMessage()
 		
-			return True
+				return True
 			
-			#else:
-			#	lg.debug('buffering message, counter is %s, sender has %s' % (message.getCounter(), sender.getCounter()))
+			else:
+				lg.debug('buffering message, counter is %s, sender has %s' % (message.getCounter(), sender.getCounterForGroup(group)))
 				# sender.bufferMessage(message)
 
 		return False
@@ -314,7 +324,7 @@ class Client:
 			group.addMember(mem)
 			
 			"""Send Hello message"""
-			self.unicastInGroup(group, mem, msg.MessageType.Hello, '', self.counter)			
+			self.unicastInGroup(group, mem, msg.MessageType.Hello, '', group.getCounter())			
 
 	def selectGroup(self, groupname):
 		self.selectedGroup = self.groups.getGroupByName(groupname)
@@ -331,6 +341,9 @@ class Client:
 		req = msg.Request(msg.RequestType.ExitGroup, cont)
 
 		_ = msg.Reply.fromString(self.askTracker(req))
+
+		for member in group.getMembers():
+			member.resetCounterForGroup(group)
 
 		self.multicastInGroup(group, msg.MessageType.Bye, '')
 

@@ -129,6 +129,10 @@ class Tracker:
 			if group is None:
 				group = Group(groupname)
 				self.groups.addNewGroup(group)
+				
+				if USE_SEQUENCER:
+					seq = self.members.getMemberByUsername('sequencer')
+					group.addMember(seq)
 
 			group.addMember(member)
 
@@ -170,5 +174,8 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	signal.signal(signal.SIGINT, sig_handler)
+
+	if USE_SEQUENCER:
+		tracker.members.addNewMember(Member(SEQUENCER_ADDR, 'sequencer'))
 
 	tracker.serve()

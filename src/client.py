@@ -174,7 +174,8 @@ class Client:
 		                      content,
 		                      self.address[0],
 		                      self.address[1],
-		                      counter)
+		                      counter,
+							  self.username)
 		
 		text = str(message)
 
@@ -202,6 +203,9 @@ class Client:
 			self.members.addNewMember(sender)
 			group.addMember(sender)
 
+		if USE_SEQUENCER and not sender.isSequencer():
+			return False
+
 		messageType = message.getType()
 
 		if messageType == msg.MessageType.Bye:
@@ -222,7 +226,7 @@ class Client:
 
 				sender.incrementCounterForGroup(group)
 				self.deliverApplicationMessage(message.getGroupName(),
-				                               message.getUsername(),
+				                               message.getOrigin(),
 				                               message.getContent())
 
 				return True
@@ -234,7 +238,7 @@ class Client:
 				# Accept the message
 				sender.incrementCounterForGroup(group)
 				self.deliverApplicationMessage(message.getGroupName(),
-				                               message.getUsername(),
+				                               message.getOrigin(),
 				                               message.getContent())
 
 				#debuff = sender.tryDebuffMessage()

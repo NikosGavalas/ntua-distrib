@@ -68,7 +68,7 @@ class Reply():
 
 
 class Message():
-	def __init__(self, typ, group, username, content, srcIp, srcPort, counter):
+	def __init__(self, typ, group, username, content, srcIp, srcPort, counter, origin):
 		self.typ = typ
 		self.group = group
 		self.username = username
@@ -76,6 +76,7 @@ class Message():
 		self.srcIp = srcIp
 		self.srcPort = srcPort
 		self.counter = counter
+		self.origin = origin
 	
 	def __str__(self):
 		ret = {
@@ -85,7 +86,8 @@ class Message():
 			"Content": self.content,
 			"SrcIp": self.srcIp,
 			"SrcPort": self.srcPort,
-			"Counter": self.counter
+			"Counter": self.counter,
+			"Origin": self.origin
 		}
 
 		return json.dumps(ret, indent=4)
@@ -94,7 +96,8 @@ class Message():
 	def fromString(rawString):
 		ret = json.loads(rawString)
 		return Message(ret["Type"], ret["Group"], ret["Username"],
-						ret["Content"], ret["SrcIp"], ret["SrcPort"], ret["Counter"])
+		               ret["Content"], ret["SrcIp"], ret["SrcPort"], ret["Counter"],
+		               ret["Origin"])
 
 	def getType(self):
 		return self.typ
@@ -113,3 +116,6 @@ class Message():
 
 	def getCounter(self):
 		return self.counter
+	
+	def getOrigin(self):
+		return self.origin

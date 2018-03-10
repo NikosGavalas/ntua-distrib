@@ -20,7 +20,8 @@ class UDPServer:
 		try:
 			self.socket.bind(self.address)
 		except socket.error:
-			lg.error('port binding failure')
+			lg.fatal('port binding failure')
+			sys.exit(1)
 
 		self.socket.setblocking(False)
 

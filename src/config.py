@@ -1,7 +1,13 @@
+# Set to true for diplaying debug messages
 DEBUG = False
 
-TRACKER_ADDR = ('127.0.0.1', 10000)
+# Tracker address and socket backlog
+TRACKER_ADDR = ('distrib-4', 46663)
 TRACKER_BACKLOG = 10
 
-USE_SEQUENCER = True
-SEQUENCER_ADDR = ('127.0.0.1', 10005)
+# Use sequencer for FIFO *and* total ordering of the messages
+USE_SEQUENCER = False
+SEQUENCER_ADDR = ('distrib-4', 46664)
+
+# Set to false only if executing tests
+INTERACTIVE_CLI_MODE = False

@@ -146,7 +146,7 @@ class Client:
 			#elif inp.startswith('!h'):
 			#	help?
 			
-			print('invalid ui command')
+			print('invalid ui command\nusage: !lg, !lm <group>, !j <group>, !w <group>, !e <group>, !q')
 			return
 
 		# Else if input doesnt not start with '!':
@@ -249,7 +249,7 @@ class Client:
 			
 			else:
 				lg.debug('buffering message, counter is %s, sender has %s' % (message.getCounter(), sender.getCounterForGroup(group)))
-				# sender.bufferMessage(message)
+				#sender.bufferMessage(message)
 
 		return False
 
@@ -324,7 +324,7 @@ class Client:
 
 		for peer in reply.getContent():
 			mem = Member((peer['Ip'], int(peer['Port'])), peer['Username'])
-			self.members.addNewMember(mem) # it is bad that I have to add him in two places though
+			self.members.addNewMember(mem)
 			group.addMember(mem)
 			
 			"""Send Hello message"""
@@ -369,13 +369,22 @@ class Client:
 if __name__ == '__main__':
 
 	def parseArgs(args):
-		if len(args) < 4:
-			lg.fatal('incorrect arguments')
+		if INTERACTIVE_CLI_MODE:
+			argc = 4
+			prompt = ""
+		else:
+			argc = 5
+			prompt = "<Filename>"
+
+		if len(args) < argc:
+			lg.fatal("incorrect arguments\n \
+                 usage: python3 client.py <IP> <Port> <Username> " 
+				 + prompt)
 			sys.exit(1)
 
-		return (args[1], int(args[2]), args[3])
+		return (args[1], int(args[2]), args[3], args[4])
 
-	ip, port, username = parseArgs(sys.argv)
+	ip, port, username, filename = parseArgs(sys.argv)
 	addr = (ip, port)
 
 	client = Client(addr, username)
@@ -388,9 +397,18 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGINT, sig_handler)
 
 	lg.info('Client instance started\n \
-	IP: %s\n \
-	Port: %s\n \
-	Username: %s\n' \
-	% (ip, port, username))
+                 IP: \t\t%s\n \
+                 Port: \t%s\n \
+                 Username: \t%s\n' \
+                 % (ip, port, username))
 
-	client.listen()
+
+	if INTERACTIVE_CLI_MODE:
+		client.listen()
+
+	else:
+		from threading import Thread
+
+		t = Thread(target=client.listen)
+
+		t.start()

@@ -65,7 +65,7 @@ class Client:
 		
 		while True:
 
-			# Unix select syscall
+			""" Unix select syscall for efficient IO without threading """
 			streams = [self.sock, sys.stdin]
 			inp, _, _ = select(streams, [], [])
 
@@ -150,7 +150,6 @@ class Client:
 			print('invalid ui command\nusage: !lg, !lm <group>, !j <group>, !w <group>, !e <group>, !q')
 			return
 
-		# Else if input doesnt not start with '!':
 		else:
 			if inp == '\n':
 				return

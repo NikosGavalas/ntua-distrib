@@ -21,6 +21,7 @@ HOSTS = ['distrib-1', 'distrib-2', 'distrib-3', 'distrib-4', 'distrib-5']
 BASE_PORT = cmd_args.p or 46663
 
 ROOT_PATH = '/home/distrib34/distrib/src/'
+ROOT_PATH_MSG = '/home/distrib34/distrib/msg/'
 TOTAL_ORDERING = cmd_args.t
 NUM_OF_CLIENTS = cmd_args.n
 
@@ -69,7 +70,7 @@ for i in range(NUM_OF_CLIENTS):
 	name = 'client' + str(i)
 	host = HOSTS[i % len(HOSTS)]
 	port = clients_base_port + i
-	filename = '../msg/messages' + str(i + 1) + '.txt '
+	filename = ROOT_PATH_MSG + 'messages' + str(i + 1) + '.txt '
 
 	args = '%s:%s ' % (host, port)
 	args += '-s ' if TOTAL_ORDERING else ''

@@ -14,6 +14,7 @@ from time import sleep
 parser = argparse.ArgumentParser()
 parser.add_argument('n', help='number of clients', type=int, action='store')
 parser.add_argument('p', help='base port', type=int, action='store')
+parser.add_argument('test_num', help='1 for first test, 2 for second', type=int, action='store')
 parser.add_argument('-t', help='use total ordering (sequencer)', action='store_true', default=False)
 parser.add_argument('-c', help='close all remote processes', action='store_true', default=False)
 cmd_args = parser.parse_args()
@@ -25,6 +26,8 @@ ROOT_PATH = '/home/distrib34/distrib/src/'
 ROOT_PATH_MSG = '/home/distrib34/distrib/msg/'
 TOTAL_ORDERING = cmd_args.t
 NUM_OF_CLIENTS = cmd_args.n
+
+SECOND_TEST = cmd_args.test_num == 2
 
 CLOSE_ALL = cmd_args.c
 
@@ -65,8 +68,8 @@ if TOTAL_ORDERING:
 	args = '%s:%s' % (sequencer_host, sequencer_port)
 	openRemoteProcess('sequencer', sequencer_host, ROOT_PATH + 'sequencer.py ' + args)
 
-# Wait 2 seconds before running the clients
-sleep(2)
+# Wait 1 second before running the clients
+sleep(1)
 
 # Clients
 clients_base_port = BASE_PORT + 2
@@ -75,10 +78,18 @@ for i in range(NUM_OF_CLIENTS):
 	host = HOSTS[i % len(HOSTS)]
 	port = clients_base_port + i
 	filename = ROOT_PATH_MSG + 'messages' + str(i + 1) + '.txt '
+	second_test_filename = ROOT_PATH_MSG + 'long_message.txt '
 
 	args = '%s:%s ' % (host, port)
 	args += '-s ' if TOTAL_ORDERING else ''
-	args += '-t ' + filename
+
+	# I am not proud of the code below. 
+	if SECOND_TEST:
+		if name == 'client0':
+			args += '-t ' + second_test_filename
+	else:
+		args += '-t ' + filename
+
 	args += name
 	args += ' %s:%s' % (tracker_host, tracker_port)
 

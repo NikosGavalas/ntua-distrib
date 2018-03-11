@@ -9,6 +9,7 @@ use Ctrl+A and D to detach. """
 import subprocess as sub
 import argparse
 import sys
+from time import sleep
 
 parser = argparse.ArgumentParser()
 parser.add_argument('n', help='number of clients', type=int, action='store')
@@ -63,6 +64,9 @@ openRemoteProcess('tracker', tracker_host, ROOT_PATH + 'tracker.py ' + args)
 if TOTAL_ORDERING:
 	args = '%s:%s' % (sequencer_host, sequencer_port)
 	openRemoteProcess('sequencer', sequencer_host, ROOT_PATH + 'sequencer.py ' + args)
+
+# Wait 2 seconds before running the clients
+sleep(2)
 
 # Clients
 clients_base_port = BASE_PORT + 2

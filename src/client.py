@@ -424,15 +424,22 @@ if __name__ == '__main__':
 		t = Thread(target=client.listen)
 		t.start()
 
-		from time import time
+		import time
 		lg.info('spamming messages from file %s...' % (filepath))
-		start = time()
+		start = time.time()
 
 		client.joinGroup('test')
 		client.selectGroup('test')
+
+		# wait for everyone to get ready
+		time.sleep(5)
+
 		with open(filepath) as f:
 			for line in f:
 				client.onText(line)
 
-		elapsed = time() - start
+		elapsed = time.time() - start
+
+		# print the measurements
+		time.sleep(5)
 		print('elapsed time : %f' % (elapsed))

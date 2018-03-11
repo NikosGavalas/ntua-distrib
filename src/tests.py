@@ -7,28 +7,51 @@ available sockets and 'screen -r <socketname>' to attach to a socket. Then
 use Ctrl+A and D to detach. """
 
 import subprocess as sub
+import argparse
+import sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument('n', help='number of clients', type=int, action='store')
+parser.add_argument('p', help='base port', type=int, action='store')
+parser.add_argument('-t', help='use total ordering (sequencer)', action='store_true', default=False)
+parser.add_argument('-c', help='close all remote processes', action='store_true', default=False)
+cmd_args = parser.parse_args()
 
 HOSTS = ['distrib-1', 'distrib-2', 'distrib-3', 'distrib-4', 'distrib-5']
-BASE_PORT = 46663
+BASE_PORT = cmd_args.p or 46663
 
 ROOT_PATH = '/home/distrib34/distrib/src/'
-TOTAL_ORDERING = False
-NUM_OF_CLIENTS = 5
+TOTAL_ORDERING = cmd_args.t
+NUM_OF_CLIENTS = cmd_args.n
+
+CLOSE_ALL = cmd_args.c
 
 
 def openRemoteProcess(name, node, executable):
-	sub.run(['screen', '-S', name, '-dm', 'ssh',
-          '-t', node, 'python3', executable])
+	cmd = ['screen', '-S', name, '-dm', 'ssh',
+            '-t', node, 'python3', executable]
+	print('running: ' + ' '.join(cmd))
+	sub.run(cmd)
 
 
 def closeRemoteProcess(name):
-	sub.run(['screen', '-S', name, '-X', 'quit'])
+	cmd = ['screen', '-S', name, '-X', 'quit']
+	print('running: ' + ' '.join(cmd))
+	sub.run(cmd)
 
 
-tracker_host = 'distrib-4'
+tracker_host = HOSTS[3]
 tracker_port = BASE_PORT
-sequencer_host = 'distrib-5'
+sequencer_host = HOSTS[4]
 sequencer_port = BASE_PORT + 1
+
+if CLOSE_ALL:
+	closeRemoteProcess('tracker')
+	if TOTAL_ORDERING:
+		closeRemoteProcess('sequencer')
+	for i in range(NUM_OF_CLIENTS):
+		closeRemoteProcess('client' + str(i))
+	sys.exit(0)
 
 # Tracker
 args = '--seq_addr %s:%s ' % (sequencer_host, sequencer_port) if TOTAL_ORDERING else ''
@@ -55,3 +78,5 @@ for i in range(NUM_OF_CLIENTS):
 	args += ' %s:%s' % (tracker_host, tracker_port)
 
 	openRemoteProcess(name, host, ROOT_PATH + 'client.py ' + args)
+
+

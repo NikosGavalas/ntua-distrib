@@ -1,27 +1,36 @@
 
 from time import strftime
-from config import DEBUG
 
 
-def formatLog(level, message):
-	return '[%s] (%s) %s' % (level, strftime("%H:%M:%S"), message)
+class Logger():
 
-def debug(message):
-	if DEBUG:
-		print(formatLog('DEBUG', message), flush=True)
+	# TODO: could also use a fd to log to a file
+	def __init__(self):
+		self.DEBUG = False
+		self.FLUSH = True
 
-def distinct(message):
-	if DEBUG:
-		print('\n>>>>>>>>>\n%s\n>>>>>>>>>\n' % str(message), flush=True)
+	def setDEBUG(self):
+		self.DEBUG = True
 
-def info(message):
-	print(formatLog('INFO', message), flush=True)
+	def _formatLog(self, level, message):
+		return '[%s] (%s) %s' % (level, strftime("%H:%M:%S"), message)
 
-def warn(message):
-	print(formatLog('WARN', message), flush=True)
+	def debug(self, message):
+		if self.DEBUG:
+			print(self._formatLog('DEBUG', message), flush=self.FLUSH)
 
-def error(message):
-	print(formatLog('ERROR', message), flush=True)
+	def distinct(self, message):
+		if self.DEBUG:
+			print('\n>>>>>>>>>\n%s\n>>>>>>>>>\n' % str(message), flush=self.FLUSH)
 
-def fatal(message):
-	print(formatLog('FATAL', message), flush=True)
+	def info(self, message):
+		print(self._formatLog('INFO', message), flush=self.FLUSH)
+
+	def warn(self, message):
+		print(self._formatLog('WARN', message), flush=self.FLUSH)
+
+	def error(self, message):
+		print(self._formatLog('ERROR', message), flush=self.FLUSH)
+
+	def fatal(self, message):
+		print(self._formatLog('FATAL', message), flush=self.FLUSH)

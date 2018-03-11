@@ -3,11 +3,13 @@ import socket
 #import threading
 import signal
 import sys
+import argparse
 
-from config import *
-import logger as lg
+from logger import Logger
 import message as msg
 from peers import Member, Group, Groups, Members
+
+lg = Logger()
 
 class TCPServer:
 	def __init__(self, address, backlog):
@@ -36,9 +38,10 @@ class TCPServer:
 
 
 class Tracker:
-	def __init__(self, address, backlog):
+	def __init__(self, address, backlog, using_seq):
 		self.address = address
 		self.backlog = backlog
+		self.USE_SEQUENCER = using_seq
 		
 		self.groups = Groups()
 
@@ -131,7 +134,7 @@ class Tracker:
 				group = Group(groupname)
 				self.groups.addNewGroup(group)
 				
-				if USE_SEQUENCER:
+				if self.USE_SEQUENCER:
 					seq = self.members.getMemberByUsername('sequencer')
 					group.addMember(seq)
 
@@ -167,7 +170,30 @@ class Tracker:
 
 
 if __name__ == '__main__':
-	tracker = Tracker(TRACKER_ADDR, TRACKER_BACKLOG)
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('addr', help="the tracker's address in the \
+	                     form of host:port (e.g. 123.123.123.123:12345)")
+	parser.add_argument('-b', help="backlog of tracker's socket, default is 10", type=int, default=10)
+	parser.add_argument('-v', help='verbose output (use for debugging)', action='store_true', default=False)
+	parser.add_argument('--seq_addr', help="use for total ordering - the sequencer's address in the \
+	                     form of host:port (e.g. 123.123.123.123:12345)")
+	args = parser.parse_args()
+
+	addr = args.addr.split(':')
+	TRACKER_ADDR = (addr[0], int(addr[1]))
+	TRACKER_BACKLOG = args.b
+
+	if args.v:
+		lg.setDEBUG()
+
+	USE_SEQUENCER = args.seq_addr is not None
+	if USE_SEQUENCER:
+		addr = args.seq_addr.split(':')
+		SEQUENCER_ADDR = (addr[0], int(addr[1]))
+		lg.info('using sequencer on %s:%s' % SEQUENCER_ADDR)
+
+	tracker = Tracker(TRACKER_ADDR, TRACKER_BACKLOG, USE_SEQUENCER)
 
 	def sig_handler(sig, frame):
 		lg.info('exiting...')

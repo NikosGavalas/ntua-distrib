@@ -30,10 +30,10 @@ class Request:
 
 		return json.dumps(ret, indent=4)
 
-	@staticmethod
-	def fromString(rawString):
+	@classmethod
+	def fromString(cls, rawString):
 		ret = json.loads(rawString)
-		return Request(ret['Type'], ret['Content'])
+		return cls(ret['Type'], ret['Content'])
 
 	def getType(self):
 		return self.typ
@@ -55,10 +55,10 @@ class Reply():
 
 		return json.dumps(ret, indent=4)
 
-	@staticmethod
-	def fromString(rawString):
+	@classmethod
+	def fromString(cls, rawString):
 		ret = json.loads(rawString)
-		return Reply(ret['Success'], ret['Content'])
+		return cls(ret['Success'], ret['Content'])
 
 	def getSuccess(self):
 		return self.success
@@ -92,10 +92,10 @@ class Message():
 
 		return json.dumps(ret, indent=4)
 
-	@staticmethod
-	def fromString(rawString):
+	@classmethod
+	def fromString(cls, rawString):
 		ret = json.loads(rawString)
-		return Message(ret["Type"], ret["Group"], ret["Username"],
+		return cls(ret["Type"], ret["Group"], ret["Username"],
 		               ret["Content"], ret["SrcIp"], ret["SrcPort"], ret["Counter"],
 		               ret["Origin"])
 

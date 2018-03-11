@@ -3,12 +3,13 @@ import socket
 import sys
 import signal
 from select import select
+import argparse
 
-from config import *
-import logger as lg
+from logger import Logger
 import message as msg
 from peers import Member, Group, Groups, Members
 
+lg = Logger()
 
 class UDPServer:
 	def __init__(self, address):
@@ -36,9 +37,11 @@ class UDPServer:
 
 
 class Client:
-	def __init__(self, address, username):
+	def __init__(self, address, username, tracker_addr, use_seq):
 		self.address = address
 		self.username = username
+		self.TRACKER_ADDR = tracker_addr
+		self.USE_SEQUENCER = use_seq
 
 		self.uid = self.register()
 
@@ -144,9 +147,6 @@ class Client:
 			#TODO list groups where current user belongs to
 			#elif inp.startswith('!mg'):
 
-			#elif inp.startswith('!h'):
-			#	help?
-			
 			print('invalid ui command\nusage: !lg, !lm <group>, !j <group>, !w <group>, !e <group>, !q')
 			return
 
@@ -204,7 +204,7 @@ class Client:
 			self.members.addNewMember(sender)
 			group.addMember(sender)
 
-		if USE_SEQUENCER and not sender.isSequencer():
+		if self.USE_SEQUENCER and not sender.isSequencer():
 			return False
 
 		messageType = message.getType()
@@ -260,7 +260,7 @@ class Client:
 	def askTracker(self, message):
 		with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 			try:
-				sock.connect(TRACKER_ADDR)
+				sock.connect(self.TRACKER_ADDR)
 			except ConnectionRefusedError:
 				lg.error('connection with tracker refused')
 				sys.exit(1)
@@ -369,26 +369,37 @@ class Client:
 
 if __name__ == '__main__':
 
-	def parseArgs(args):
-		if INTERACTIVE_CLI_MODE:
-			argc = 4
-			prompt = ""
-		else:
-			argc = 5
-			prompt = "<Filename>"
+	parser = argparse.ArgumentParser()
+	parser.add_argument('addr', help="the client's address in the \
+	                     form of host:port (e.g. 123.123.123.123:12345)")
+	parser.add_argument('name', help='username')
+	parser.add_argument('tracker_addr', help="the tracker's address in the \
+						form of host:port (e.g. 123.123.123.123:12345)")
+	parser.add_argument('-t', help='execute tests (emulation mode) - provide file', action='store')
+	parser.add_argument('-s', help="use sequencer for total ordering", action='store_true', default=False)
+	parser.add_argument('-v', help='verbose output (use for debugging)', action='store_true', default=False)
+	args = parser.parse_args()
 
-		if len(args) < argc:
-			lg.fatal("incorrect arguments\n \
-                 usage: python3 client.py <IP> <Port> <Username> " 
-				 + prompt)
-			sys.exit(1)
+	addr = args.addr.split(':')
+	CLIENT_ADDR = (addr[0], int(addr[1]))
 
-		return (args[1], int(args[2]), args[3], args[4])
+	username = args.name
 
-	ip, port, username, filename = parseArgs(sys.argv)
-	addr = (ip, port)
+	addr = args.tracker_addr.split(':')
+	TRACKER_ADDR = (addr[0], int(addr[1]))
 
-	client = Client(addr, username)
+	USE_SEQUENCER = args.s
+	if USE_SEQUENCER:
+		lg.info('using sequencer')
+
+	EXECUTE_TESTS = args.t is not None
+	if EXECUTE_TESTS:
+		filepath = args.t
+
+	if args.v:
+		lg.setDEBUG()
+	
+	client = Client(CLIENT_ADDR, username, TRACKER_ADDR, USE_SEQUENCER)
 
 	def sig_handler(sig, frame):
 		print('\nbye')
@@ -401,15 +412,27 @@ if __name__ == '__main__':
                  IP: \t\t%s\n \
                  Port: \t%s\n \
                  Username: \t%s\n' \
-                 % (ip, port, username))
+                 % (CLIENT_ADDR[0], CLIENT_ADDR[1], username))
 
-
-	if INTERACTIVE_CLI_MODE:
+	if not EXECUTE_TESTS:
 		client.listen()
 
+	# if executing tests, read file, spam each line, and report time elapsed
 	else:
+		# give the listener to a background thread
 		from threading import Thread
-
 		t = Thread(target=client.listen)
-
 		t.start()
+
+		from time import time
+		lg.info('spamming messages from file %s...' % (filepath))
+		start = time()
+
+		client.joinGroup('test')
+		client.selectGroup('test')
+		with open(filepath) as f:
+			for line in f:
+				client.onText(line)
+
+		elapsed = time() - start
+		print('elapsed time : %f' % (elapsed))

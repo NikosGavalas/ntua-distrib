@@ -2,13 +2,13 @@
 import socket
 import sys
 import signal
-from select import select
+import argparse
 
-from config import *
-import logger as lg
+from logger import Logger
 import message as msg
 from peers import Member, Group, Groups, Members
 
+lg = Logger()
 
 class UDPServer:
 	def __init__(self, address):
@@ -22,8 +22,8 @@ class UDPServer:
 		except socket.error:
 			lg.error('port binding failure')
 
-		if not USE_SEQUENCER:
-			self.socket.setblocking(False)
+		#if not USE_SEQUENCER:
+		#	self.socket.setblocking(False)
 
 	def getSocket(self):
 		return self.socket
@@ -34,8 +34,7 @@ class UDPServer:
 	def __exit__(self, exc_type, exc_val, traceback):
 		self.socket.close()
 
-
-class Client:
+class Sequencer:
 	def __init__(self, address, username):
 		self.address = address
 		self.username = username
@@ -62,12 +61,6 @@ class Client:
 				continue
 
 			self.onReceive(data.decode())
-
-	#if self.selectedGroup is None:
-	#	print('you need to select a group first')
-	#	return
-	
-	#self.multicastInGroup(self.selectedGroup, msg.MessageType.Application, inp.strip("\n"))
 
 	def multicastInGroup(self, group, typ, message, origin):
 		if typ == msg.MessageType.Application:
@@ -170,9 +163,21 @@ class Client:
 
 if __name__ == '__main__':
 
+	parser = argparse.ArgumentParser()
+	parser.add_argument('addr', help="the sequencer's address in the \
+	                     form of host:port (e.g. 123.123.123.123:12345)")
+	parser.add_argument('-v', help='verbose output (use for debugging)', action='store_true', default=False)
+	args = parser.parse_args()
+
+	addr = args.addr.split(':')
+	SEQUENCER_ADDR = (addr[0], int(addr[1]))
+
+	if args.v:
+		lg.setDEBUG()
+
 	username = 'sequencer'
 
-	client = Client(SEQUENCER_ADDR, username)
+	client = Sequencer(SEQUENCER_ADDR, username)
 
 	def sig_handler(sig, frame):
 		print('\nbye')
@@ -181,10 +186,10 @@ if __name__ == '__main__':
 
 	signal.signal(signal.SIGINT, sig_handler)
 
-	lg.info('Sequencer instance started\n \
-	IP: %s\n \
-	Port: %s\n \
-	Username: %s\n' \
+	lg.info('Sequencer instance started:\n \
+                           IP: %s\n \
+                           Port: %s\n \
+                           Username: %s\n' \
 	% (SEQUENCER_ADDR[0], int(SEQUENCER_ADDR[1]), username))
 
 	client.listen()

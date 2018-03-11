@@ -1,7 +1,5 @@
 
 from hashlib import sha256
-from config import *
-
 
 # instead of using these java-like methods, I should probably use "static" class properties
 
@@ -29,7 +27,7 @@ class Member:
 		return self.username
 
 	def isSequencer(self):
-		return self.address == SEQUENCER_ADDR
+		return self.username == 'sequencer'
 
 	#def getCounter(self):
 	#	return self.counter

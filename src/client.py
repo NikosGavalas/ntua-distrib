@@ -424,15 +424,15 @@ if __name__ == '__main__':
 		t = Thread(target=client.listen)
 		t.start()
 
-		import time
 		lg.info('spamming messages from file %s...' % (filepath))
-		start = time.time()
-
 		client.joinGroup('test')
 		client.selectGroup('test')
 
+		import time
 		# wait for everyone to get ready
 		time.sleep(5)
+
+		start = time.time()
 
 		with open(filepath) as f:
 			for line in f:

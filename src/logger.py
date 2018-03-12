@@ -9,6 +9,7 @@ class Logger():
 		self.DEBUG = False
 		self.FLUSH = True
 		self.PROFILING = False
+		self.profile_info = False
 
 	def setDEBUG(self):
 		self.DEBUG = True
@@ -41,4 +42,8 @@ class Logger():
 
 	def profile(self, message):
 		if self.PROFILING:
-			print(self._formatLog('PROFILE', message), flush=self.FLUSH)
+			self.profile_info += self._formatLog('PROFILE', message)
+
+	def report(self):
+		if self.PROFILING:
+			print('\n' + self.profile_info)

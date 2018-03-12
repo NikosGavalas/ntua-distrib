@@ -193,7 +193,7 @@ class Client:
 
 		cont = message.getContent()
 		if cont.startswith('10'):
-			lg.profile('| %s | %s | %f |' % (cont.split()[0], message.getUsername(), recv_time))
+			lg.profile('| %s | %s | %f |\n' % (cont.split()[0], message.getUsername(), recv_time))
 
 		group = self.groups.getGroupByName(message.getGroupName())
 		
@@ -449,6 +449,9 @@ if __name__ == '__main__':
 
 		# print the measurements
 		time.sleep(5)
-		print('start: %f' % (start))
-		print('end: %f' % (end))
-		print('elapsed: %f' % (elapsed))
+		lg.report()
+		print('| | |')
+		print('| -- | -- |')
+		print('| start: | %f |' % (start))
+		print('| end: | %f |' % (end))
+		print('| elapsed: | %f |' % (elapsed))

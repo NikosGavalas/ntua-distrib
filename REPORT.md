@@ -28,4 +28,34 @@ select syscall, client messages
 
 ### Πείραμα 1: Απόδοση του συστήματος 
 
+#### FIFO Ordering
+
+` python3 tests.py 5 46663 1`
+
+##### distrib-1
+
+| send_start | recv_end | elapsed |
+| -- | -- | -- |
+
+
+##### distrib-2
+
+| send_start | recv_end | elapsed |
+
+##### distrib-3
+
+| send_start | recv_end | elapsed |
+
+##### distrib-4
+
+| send_start | recv_end | elapsed |
+
+##### distrib-5
+
+| send_start | recv_end | elapsed |
+
+#### FIFO & Total Ordering
+
+
+
 ### Πείραμα 2: Κλιμακωσιμότητα του συστήματος

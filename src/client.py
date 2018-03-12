@@ -187,10 +187,11 @@ class Client:
 	"""Returns true if message has been delivered to the application layer"""
 	def onReceive(self, text):
 		recv_time = time.time()
-		lg.profile('message received at %f' % recv_time)
 
 		message = msg.Message.fromString(text)
 		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
+		
+		lg.profile('message %s from %s received at %f' % (message.getContent(), message.getUsername(), recv_time))
 
 		group = self.groups.getGroupByName(message.getGroupName())
 		

@@ -190,8 +190,10 @@ class Client:
 
 		message = msg.Message.fromString(text)
 		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
-		
-		lg.profile('message %s from %s received at %f' % (message.getContent(), message.getUsername(), recv_time))
+
+		cont = message.getContent()
+		if cont.startswith('10'):
+			lg.profile('| %s | %s | %f |' % (cont.split()[0], message.getUsername(), recv_time))
 
 		group = self.groups.getGroupByName(message.getGroupName())
 		

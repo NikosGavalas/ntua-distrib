@@ -79,7 +79,7 @@ for i in range(NUM_OF_CLIENTS):
 	port = clients_base_port + i
 	filename = ROOT_PATH_MSG + 'messages' + str(i + 1) + '.txt '
 	# the following line is a quick hack. delete afterwards
-	testfile = ROOT_PATH_MSG + 'test.txt'
+	testfile = ROOT_PATH_MSG + 'test.txt '
 	second_test_filename = ROOT_PATH_MSG + 'long_message.txt '
 
 	args = '%s:%s ' % (host, port)

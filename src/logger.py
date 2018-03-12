@@ -9,7 +9,7 @@ class Logger():
 		self.DEBUG = False
 		self.FLUSH = True
 		self.PROFILING = False
-		self.profile_info = False
+		self.profile_info = ''
 
 	def setDEBUG(self):
 		self.DEBUG = True

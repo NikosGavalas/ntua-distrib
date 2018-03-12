@@ -8,9 +8,13 @@ class Logger():
 	def __init__(self):
 		self.DEBUG = False
 		self.FLUSH = True
+		self.PROFILING = False
 
 	def setDEBUG(self):
 		self.DEBUG = True
+
+	def setPROFILE(self):
+		self.PROFILING = True
 
 	def _formatLog(self, level, message):
 		return '[%s] (%s) %s' % (level, strftime("%H:%M:%S"), message)
@@ -34,3 +38,7 @@ class Logger():
 
 	def fatal(self, message):
 		print(self._formatLog('FATAL', message), flush=self.FLUSH)
+
+	def profile(self, message):
+		if self.PROFILING:
+			print(self._formatLog('PROFILE', message), flush=self.FLUSH)

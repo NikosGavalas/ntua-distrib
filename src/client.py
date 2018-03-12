@@ -2,8 +2,9 @@
 import socket
 import sys
 import signal
-from select import select
 import argparse
+import time
+from select import select
 
 from logger import Logger
 import message as msg
@@ -185,6 +186,9 @@ class Client:
 
 	"""Returns true if message has been delivered to the application layer"""
 	def onReceive(self, text):
+		recv_time = time.time()
+		lg.profile('message received at %f' % recv_time)
+
 		message = msg.Message.fromString(text)
 		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
 
@@ -394,6 +398,7 @@ if __name__ == '__main__':
 	EXECUTE_TESTS = args.t is not None
 	if EXECUTE_TESTS:
 		filepath = args.t
+		lg.setPROFILE()
 
 	if args.v:
 		lg.setDEBUG()
@@ -427,7 +432,6 @@ if __name__ == '__main__':
 		client.joinGroup('test')
 		client.selectGroup('test')
 
-		import time
 		# wait for everyone to get ready
 		time.sleep(5)
 
@@ -437,8 +441,11 @@ if __name__ == '__main__':
 			for line in f:
 				client.onText(line)
 
-		elapsed = time.time() - start
+		end = time.time()
+		elapsed = end - start
 
 		# print the measurements
 		time.sleep(5)
-		print('elapsed time : %f' % (elapsed))
+		print('start: %f' % (start))
+		print('end: %f' % (end))
+		print('elapsed: %f' % (elapsed))

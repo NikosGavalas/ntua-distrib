@@ -95,4 +95,4 @@ for i in range(NUM_OF_CLIENTS):
 
 	openRemoteProcess(name, host, ROOT_PATH + 'client.py ' + args)
 
-
+print("Don't forget to close the remote processes afterwards with '-c'")

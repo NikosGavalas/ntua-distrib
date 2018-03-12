@@ -9,6 +9,8 @@
 | Γαβαλάς Νίκος | 03113121 |
 | Καραμέρης Μάρκος | 03113148 |
 
+---
+
 ## Περιγραφή
 
 Το ζητούμενο είναι η κατασκευή ενός group messenger, αποτελούμενο από clients (υπεύθυνοι για τη διαχείριση των μηνυμάτων των groups στα οποία ανήκουν) και έναν tracker, που κρατάει μια εικόνα για την κατάσταση των groups και απαντάει σε αιτήματα των clients, όταν αυτοί θέλουν να βρουν/δημιουργήσουν groups και άλλους clients-peers.
@@ -47,6 +49,8 @@
 
 ### Χρήση των προγραμμάτων
 
+---
+
 <!-- TODO -->
 
 ## Πειράματα
@@ -70,13 +74,17 @@ optional arguments:
   -c          close all remote processes
 ```
 
-### Πείραμα 1: Απόδοση του συστήματος 
+---
 
-#### FIFO Ordering
+### **Πείραμα 1**: Απόδοση του συστήματος 
 
-` python3 tests.py 5 46663 1`
+#### a) FIFO Ordering
 
-**client0**
+```
+$python3 tests.py 5 46663 1
+```
+
+`client0`
 
 | | |
 | -- | -- |
@@ -86,13 +94,13 @@ optional arguments:
 
 | message | from | at |
 | -- | -- | -- |
-| 10e Beware of the Leopard | client4 | 1520864763.802138 |
-| 10d Forty-two | client3 | 1520864763.317927 |
-| 10a I'd far rather be happy than right any day. | client0 | 1520864763.238586 |
-| 10c Doesn't matter! | client2 | 1520864763.233414 |
-| 10b There is an answer? | client1 | 1520864763.195053 |
+| 10e | client4 | 1520864763.802138 |
+| 10d | client3 | 1520864763.317927 |
+| 10a | client0 | 1520864763.238586 |
+| 10c | client2 | 1520864763.233414 |
+| 10b | client1 | 1520864763.195053 |
 
-**client1**
+`client1`
 
 | | |
 | -- | -- |
@@ -102,13 +110,13 @@ optional arguments:
 
 | message | from | at |
 | -- | -- | -- |
-| 10e Beware of the Leopard | client4 | 1520864763.801671 |
-| 10d Forty-two | client3 | 1520864763.317673 |
-| 10a I'd far rather be happy than right any day. | client0 | 1520864763.237956 |
-| 10c Doesn't matter! | client2 | 1520864763.232598 |
-| 10b There is an answer? | client1 | 1520864763.194553 |
+| 10e | client4 | 1520864763.801671 |
+| 10d | client3 | 1520864763.317673 |
+| 10a | client0 | 1520864763.237956 |
+| 10c | client2 | 1520864763.232598 |
+| 10b | client1 | 1520864763.194553 |
 
-**client2**
+`client2`
 
 | | |
 | -- | -- |
@@ -118,13 +126,13 @@ optional arguments:
 
 | message | from | at |
 | -- | -- | -- |
-| 10e Beware of the Leopard | client4 | 1520864763.801829 |
-| 10d Forty-two | client3 | 1520864763.317707 |
-| 10a I'd far rather be happy than right any day. | client0 | 1520864763.238106 |
-| 10c Doesn't matter! | client2 | 1520864763.232475 |
-| 10b There is an answer? | client1 | 1520864763.194957 |
+| 10e | client4 | 1520864763.801829 |
+| 10d | client3 | 1520864763.317707 |
+| 10a | client0 | 1520864763.238106 |
+| 10c | client2 | 1520864763.232475 |
+| 10b | client1 | 1520864763.194957 |
 
-**client3**
+`client3`
 
 | | |
 | -- | -- |
@@ -134,13 +142,13 @@ optional arguments:
 
 | message | from | at |
 | -- | -- | -- |
-| 10e Beware of the Leopard | client4 | 1520864763.801995 |
-| 10d Forty-two | client3 | 1520864763.317729 |
-| 10a I'd far rather be happy than right any day. | client0 | 1520864763.238746 |
-| 10c Doesn't matter! | client2 | 1520864763.232818 |
-| 10b There is an answer? | client1 | 1520864763.195013 |
+| 10e | client4 | 1520864763.801995 |
+| 10d | client3 | 1520864763.317729 |
+| 10a | client0 | 1520864763.238746 |
+| 10c | client2 | 1520864763.232818 |
+| 10b | client1 | 1520864763.195013 |
 
-**client4**
+`client4`
 
 | | |
 | -- | -- |
@@ -150,35 +158,190 @@ optional arguments:
 
 | message | from | at |
 | -- | -- | -- |
-| 10e Beware of the Leopard | client4 | 1520864763.801871 |
-| 1e But the plans were on display | client4 | 1520864763.791658 |
-| 10a I'd far rather be happy than right any day. | client0 | 1520864763.238704 |
-| 10c Doesn't matter! | client2 | 1520864763.232801 |
-| 10b There is an answer? | client1 | 1520864763.195222 |
+| 10e | client4 | 1520864763.801871 |
+| 1e  | client4 | 1520864763.791658 |
+| 10a | client0 | 1520864763.238704 |
+| 10c | client2 | 1520864763.232801 |
+| 10b | client1 | 1520864763.195222 |
+
+**Μετρικές**:
+- Throughput
+  
+  
+
+- Latency
+
+  
 
 
-#### FIFO & Total Ordering
+- Cost
 
-` python3 tests.py -t 5 46663 1`
+  
 
-### Πείραμα 2: Κλιμακωσιμότητα του συστήματος
 
-#### FIFO Ordering
+#### b) FIFO & Total Ordering
 
-` python3 tests.py 2 46663 2`
+```
+$python3 tests.py -t 5 46663 1
+```
 
-` python3 tests.py 4 46663 2` 
+`client0`
 
-` python3 tests.py 8 46663 2` 
+| | |
+| -- | -- |
+| start: | 1520877999.384225 |
+| end: | 1520877999.396608 |
+| elapsed: | 0.012383 |
 
-` python3 tests.py 16 46663 2` 
+| message | from | at |
+| -- | -- | -- |
+| 10b | client1 | 1520877999.385221 |
+| 10a | client0 | 1520877999.395910 |
+| 10c | client2 | 1520877999.455505 |
+| 10d | client3 | 1520877999.473458 |
+| 10e | client4 | 1520877999.476985 |
 
-#### FIFO & Total Ordering
+`client1`
 
-` python3 tests.py -t 2 46663 2`
+| | |
+| -- | -- |
+| start: | 1520877999.366537 |
+| end: | 1520877999.381957 |
+| elapsed: | 0.015420 |
 
-` python3 tests.py -t 4 46663 2` 
+| message | from | at |
+| -- | -- | -- |
+| 10b | client1 | 1520877999.380185 |
+| 10a | client0 | 1520877999.390893 |
+| 10c | client2 | 1520877999.450411 |
+| 10d | client3 | 1520877999.468378 |
+| 10e | client4 | 1520877999.471787 |
 
-` python3 tests.py -t 8 46663 2` 
+`client2`
 
-` python3 tests.py -t 16 46663 2` 
+| | |
+| -- | -- |
+| start: | 1520877999.438028 |
+| end: | 1520877999.448506 |
+| elapsed: | 0.010478 |
+
+| message | from | at |
+| -- | -- | -- |
+| 10b | client1 | 1520877999.382484 |
+| 10a | client0 | 1520877999.393192 |
+| 10c | client2 | 1520877999.452803 |
+| 10d | client3 | 1520877999.470711 |
+| 10e | client4 | 1520877999.474160 |
+
+`client3`
+
+| | |
+| -- | -- |
+| start: | 1520877999.438009 |
+| end: | 1520877999.448662 |
+| elapsed: | 0.010653 |
+
+| message | from | at |
+| -- | -- | -- |
+| 10b | client1 | 1520877999.381281 |
+| 10a | client0 | 1520877999.391977 |
+| 10c | client2 | 1520877999.451603 |
+| 10d | client3 | 1520877999.469470 |
+| 10e | client4 | 1520877999.472928 |
+
+`client4`
+
+| | |
+| -- | -- |
+| start: | 1520877999.441991 |
+| end: | 1520877999.458041 |
+| elapsed: | 0.016050 |
+
+| message | from | at |
+| -- | -- | -- |
+| 10b | client1 | 1520877999.378629 |
+| 10a | client0 | 1520877999.389373 |
+| 10c | client2 | 1520877999.448982 |
+| 10d | client3 | 1520877999.466878 |
+| 10e | client4 | 1520877999.470432 |
+
+
+**Μετρικές**:
+- Throughput
+  
+  
+
+- Latency
+
+  
+
+
+- Cost
+
+  
+
+
+
+---
+
+### **Πείραμα 2**: Κλιμακωσιμότητα του συστήματος
+
+#### a) FIFO Ordering
+
+```
+python3 tests.py 2 46663 2
+```
+
+
+
+
+```
+python3 tests.py 4 46663 2
+```
+
+
+
+
+```
+python3 tests.py 8 46663 2
+```
+
+
+
+
+```
+python3 tests.py 16 46663 2
+```
+
+
+
+
+#### b) FIFO & Total Ordering
+
+```
+python3 tests.py -t 2 46663 2
+```
+
+
+
+
+```
+python3 tests.py -t 4 46663 2
+```
+
+
+
+
+```
+python3 tests.py -t 8 46663 2
+```
+
+
+
+
+```
+python3 tests.py -t 16 46663 2
+```
+
+
+

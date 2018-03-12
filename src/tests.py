@@ -78,6 +78,8 @@ for i in range(NUM_OF_CLIENTS):
 	host = HOSTS[i % len(HOSTS)]
 	port = clients_base_port + i
 	filename = ROOT_PATH_MSG + 'messages' + str(i + 1) + '.txt '
+	# the following line is a quick hack. delete afterwards
+	testfile = ROOT_PATH_MSG + 'test.txt'
 	second_test_filename = ROOT_PATH_MSG + 'long_message.txt '
 
 	args = '%s:%s ' % (host, port)
@@ -87,6 +89,8 @@ for i in range(NUM_OF_CLIENTS):
 	if SECOND_TEST:
 		if name == 'client0':
 			args += '-t ' + second_test_filename
+		else:
+			args += '-t ' + testfile
 	else:
 		args += '-t ' + filename
 

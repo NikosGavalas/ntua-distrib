@@ -192,7 +192,7 @@ class Client:
 		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
 
 		cont = message.getContent()
-		if cont.startswith('10'):
+		if cont.startswith('10') or cont.startswith('50'):
 			lg.profile('| %s | %s | %f |\n' % (cont.split()[0], message.getUsername(), recv_time))
 
 		group = self.groups.getGroupByName(message.getGroupName())
@@ -448,8 +448,9 @@ if __name__ == '__main__':
 		elapsed = end - start
 
 		# print the measurements
-		time.sleep(5)
+		time.sleep(2)
 		lg.report()
+
 		print('| | |')
 		print('| -- | -- |')
 		print('| start: | %f |' % (start))

@@ -17,7 +17,7 @@ class Member:
 
 		#self.isUninitialized = True
 
-		self.messageBuffer = []
+		self.buffer = {}
 
 	def getUid(self):
 		return self.uid
@@ -46,9 +46,30 @@ class Member:
 	def resetCounterForGroup(self, group):
 		self.counters[group] = 0
 
-	#def bufferMessageForGroup(self, message, group):
+	""" buffer has this struct:
+	{
+		group1: {
+			1: message,
+			2: message
+		},
+		group2: {
+			1: message,
+			2: message
+		}
+	}
+	"""
+	def bufferMessageForGroup(self, message, group):
+		try:
+			self.buffer[group.getName()][message.getCounter()] = message
+		except KeyError:
+			self.buffer[group.getName()] = {}
+			self.bufferMessageForGroup(message, group)
 
-	#def tryDebuffMessageForGroup(self):
+	def tryDebuffMessageForGroup(self, message, group):
+		try:
+			return self.buffer[group.getName()][message.getCounter() + 1]
+		except KeyError:
+			return None
 
 	def decreaseTimeout(self, val):
 		self.timeout -= val

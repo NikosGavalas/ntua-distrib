@@ -268,15 +268,17 @@ class Client:
 				                               message.getOrigin(),
 				                               message.getContent())
 
-				#debuff = sender.tryDebuffMessage()
-				#while debuff is not None:
-				#	debuff = sender.tryDebuffMessage()
+				debuff = sender.tryDebuffMessageForGroup(message, group)
+				while debuff is not None:
+					sender.incrementCounterForGroup(group)
+					self.deliverApplicationMessage(group, sender.getUsername(), debuff.getContent())
+					debuff = sender.tryDebuffMessageForGroup(message, group)
 		
 				return True
 			
 			else:
 				lg.debug('buffering message, counter is %s, sender has %s' % (message.getCounter(), sender.getCounterForGroup(group)))
-				#sender.bufferMessage(message)
+				sender.bufferMessageForGroup(message, group)
 
 		return False
 

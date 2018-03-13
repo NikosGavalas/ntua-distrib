@@ -9,6 +9,7 @@ class RequestType:
 	ListMembers = 4
 	ExitGroup = 5
 	Quit = 6
+	Heartbeat = 7
 
 
 class MessageType:

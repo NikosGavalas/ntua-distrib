@@ -1,9 +1,10 @@
 
 import socket
-#import threading
+from threading import Thread
 import signal
 import sys
 import argparse
+import time
 
 from logger import Logger
 import message as msg
@@ -52,7 +53,22 @@ class Tracker:
 
 		lg.info('tracker listening on %s:%s' % self.address)
 
+	def heartbeatDaemon(self):
+		while True:
+			time.sleep(60)
+			
+			for member in self.members.getMembers():
+				member.decreaseTimeout(60)
+
+				if member.getTimeout() < 0:
+					self.groups.removeMemberFromAllGroups(member)
+					self.members.deleteMember(member)
+
 	def serve(self):
+		t = Thread(target=self.heartbeatDaemon)
+		t.daemon = True
+		t.start()
+
 		while True:
 			clientSock, clientAddr = self.sock.accept()
 			lg.debug('connection accepted from ' + clientAddr[0] + ':' + str(clientAddr[1]))
@@ -163,6 +179,15 @@ class Tracker:
 			self.groups.removeMemberFromAllGroups(member)
 				
 			self.members.deleteMember(member)
+
+			return msg.Reply(True, '')
+
+		if reqType == msg.RequestType.Heartbeat:
+			username = reqContent['Username']
+
+			member = self.members.getMemberByUsername(username)
+			
+			member.increaseTimeout(60)
 
 			return msg.Reply(True, '')
 

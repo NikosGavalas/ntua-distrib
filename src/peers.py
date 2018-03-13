@@ -13,6 +13,8 @@ class Member:
 
 		self.counters = {}
 
+		self.timeout = 60
+
 		#self.isUninitialized = True
 
 		self.messageBuffer = []
@@ -29,15 +31,6 @@ class Member:
 	def isSequencer(self):
 		return self.username == 'sequencer'
 
-	#def getCounter(self):
-	#	return self.counter
-	
-	#def incrementCounter(self):
-	#	self.counter = self.counter + 1
-
-	#def initializeCounter(self, value):
-	#	self.counter = value
-
 	def initializeCounterForGroup(self, value, group):
 		self.counters[group] = value
 
@@ -53,13 +46,18 @@ class Member:
 	def resetCounterForGroup(self, group):
 		self.counters[group] = 0
 
-	#def firstMessageReceived(self):
-	#	self.isUninitialized = False
+	#def bufferMessageForGroup(self, message, group):
 
-	#def bufferMessage(self, message):
+	#def tryDebuffMessageForGroup(self):
 
-	#def tryDebuffMessage(self):
+	def decreaseTimeout(self, val):
+		self.timeout -= val
 
+	def increaseTimeout(self, val):
+		self.timeout += val
+
+	def getTimeout(self):
+		return self.timeout
 
 	def toDict(self):
 		return {'Ip': self.address[0], 'Port': self.address[1], 'Username': self.username, 'Uid': self.uid}
@@ -146,6 +144,9 @@ class Members:
 	def addNewMember(self, newMem):
 		if newMem not in self.members:
 			self.members.append(newMem)
+
+	def getMembers(self):
+		return self.members
 
 	def getMemberByUsername(self, username):
 		for member in self.members:

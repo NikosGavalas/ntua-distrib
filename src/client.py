@@ -5,6 +5,7 @@ import signal
 import argparse
 import time
 from select import select
+from threading import Thread
 
 from logger import Logger
 import message as msg
@@ -58,10 +59,29 @@ class Client:
 
 		lg.debug('client listening on %s:%s' % self.address)
 
+	def heartbeat(self):
+		while True:
+			time.sleep(60)
+
+			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+				sock.connect(self.TRACKER_ADDR)
+				lg.debug('heartbeat')
+
+				cont = {'Username': self.username}
+				heartbeat = msg.Request(msg.RequestType.Heartbeat, cont)
+				sock.send(str(heartbeat).encode())
+				# wait for answer
+				sock.recv(4096)
+				sock.close()
+
 	def prompt(self):
 		print('[%s]> ' % (username), end='', flush=True)
 		
 	def listen(self):
+		t = Thread(target=self.heartbeat)
+		t.daemon = True
+		t.start()
+
 		self.prompt()
 		
 		while True:
@@ -427,7 +447,6 @@ if __name__ == '__main__':
 	# if executing tests, read file, spam each line, and report time elapsed
 	else:
 		# give the listener to a background thread
-		from threading import Thread
 		t = Thread(target=client.listen)
 		t.start()
 

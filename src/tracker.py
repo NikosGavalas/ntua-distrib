@@ -78,7 +78,6 @@ class Tracker:
 			# thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
 
 			# thread.start()
-			#thread.join() # is this correct or threads never return?
 
 	def exit(self):
 		self.sock.close()

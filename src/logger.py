@@ -4,7 +4,6 @@ from time import strftime
 
 class Logger():
 
-	# TODO: could also use a fd to log to a file
 	def __init__(self):
 		self.DEBUG = False
 		self.FLUSH = True

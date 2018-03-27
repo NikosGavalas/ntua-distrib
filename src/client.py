@@ -402,7 +402,7 @@ if __name__ == '__main__':
 	                     form of host:port (e.g. 123.123.123.123:12345)")
 	parser.add_argument('name', help='username')
 	parser.add_argument('tracker_addr', help="the tracker's address in the \
-						form of host:port (e.g. 123.123.123.123:12345)")
+	                     form of host:port (e.g. 123.123.123.123:12345)")
 	parser.add_argument('-t', help='execute tests (emulation mode) - provide file', action='store')
 	parser.add_argument('-s', help="use sequencer for total ordering", action='store_true', default=False)
 	parser.add_argument('-v', help='verbose output (use for debugging)', action='store_true', default=False)
@@ -446,9 +446,9 @@ if __name__ == '__main__':
 	if not EXECUTE_TESTS:
 		client.listen()
 
-	# if executing tests, read file, spam each line, and report time elapsed
 	else:
-		# give the listener to a background thread
+		""" if executing tests, read file, spam each line, and report time elapsed """
+		""" give the listener to a background thread """
 		t = Thread(target=client.listen)
 		t.start()
 
@@ -456,7 +456,7 @@ if __name__ == '__main__':
 		client.joinGroup('test')
 		client.selectGroup('test')
 
-		# wait for everyone to get ready
+		""" wait for everyone to get ready """
 		time.sleep(5)
 
 		start = time.time()
@@ -468,7 +468,7 @@ if __name__ == '__main__':
 		end = time.time()
 		elapsed = end - start
 
-		# print the measurements
+		""" print the measurements """
 		time.sleep(2)
 		lg.report()
 

@@ -85,22 +85,21 @@ class Sequencer:
 			lg.debug('sending %s to %s' % (text, member.getAddress()))
 			sock.sendto(text.encode(), member.getAddress())
 
-	"""Returns true if message has been delivered to the application layer"""
+	""" Returns true if message has been delivered to the application layer """
 	def onReceive(self, text):
 		message = msg.Message.fromString(text)
 		lg.debug('received %s from %s' % (message, message.getSrcAddress()))
 
 		group = self.groups.getGroupByName(message.getGroupName())
 		
-		"""If the group doesn't exist, then the message is not for us, so we return"""
+		""" If the group doesn't exist, then the message is not for us, so we return """
 		if group is None:
 			group = Group(message.getGroupName())
 			self.groups.addNewGroup(group)
 
 		sender = self.members.getMemberByUsername(message.getUsername())
 
-		"""If we don't already know the sender, we append him in our structs
-		(this was before adding the "hello" and "bye" messages)"""
+		""" If we don't already know the sender, we append him in our structs """
 		if sender is None:
 			sender = Member(message.getSrcAddress(), message.getUsername())
 			self.members.addNewMember(sender)
@@ -141,15 +140,10 @@ class Sequencer:
 				                    message.getOrigin(),
 				                    message.getContent())
 
-				#debuff = sender.tryDebuffMessage()
-				#while debuff is not None:
-				#	debuff = sender.tryDebuffMessage()
-		
 				return True
 			
 			else:
 				lg.debug('buffering message, counter is %s, sender has %s' % (message.getCounter(), sender.getCounterForGroup(group)))
-				# sender.bufferMessage(message)
 
 		return False
 

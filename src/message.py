@@ -3,120 +3,120 @@ import json
 
 
 class RequestType:
-	ListGroups = 1
-	JoinGroup = 2
-	Register = 3
-	ListMembers = 4
-	ExitGroup = 5
-	Quit = 6
-	Heartbeat = 7
+    ListGroups = 1
+    JoinGroup = 2
+    Register = 3
+    ListMembers = 4
+    ExitGroup = 5
+    Quit = 6
+    Heartbeat = 7
 
 
 class MessageType:
-	Hello = 1
-	Application = 2
-	Bye = 3
+    Hello = 1
+    Application = 2
+    Bye = 3
 
 
 class Request:
-	def __init__(self, typ, content):
-		self.typ = typ
-		self.content = content
+    def __init__(self, typ, content):
+        self.typ = typ
+        self.content = content
 
-	def __str__(self):
-		ret = {}
+    def __str__(self):
+        ret = {}
 
-		ret['Type'] = self.typ
-		ret['Content'] = self.content
+        ret['Type'] = self.typ
+        ret['Content'] = self.content
 
-		return json.dumps(ret, indent=4)
+        return json.dumps(ret, indent=4)
 
-	@classmethod
-	def fromString(cls, rawString):
-		ret = json.loads(rawString)
-		return cls(ret['Type'], ret['Content'])
+    @classmethod
+    def fromString(cls, rawString):
+        ret = json.loads(rawString)
+        return cls(ret['Type'], ret['Content'])
 
-	def getType(self):
-		return self.typ
+    def getType(self):
+        return self.typ
 
-	def getContent(self):
-		return self.content
-	
-	
+    def getContent(self):
+        return self.content
+
+
 class Reply():
-	def __init__(self, success, content):
-		self.success = success
-		self.content = content
+    def __init__(self, success, content):
+        self.success = success
+        self.content = content
 
-	def __str__(self):
-		ret = {}
+    def __str__(self):
+        ret = {}
 
-		ret['Success'] = self.success
-		ret['Content'] = self.content
+        ret['Success'] = self.success
+        ret['Content'] = self.content
 
-		return json.dumps(ret, indent=4)
+        return json.dumps(ret, indent=4)
 
-	@classmethod
-	def fromString(cls, rawString):
-		ret = json.loads(rawString)
-		return cls(ret['Success'], ret['Content'])
+    @classmethod
+    def fromString(cls, rawString):
+        ret = json.loads(rawString)
+        return cls(ret['Success'], ret['Content'])
 
-	def getSuccess(self):
-		return self.success
+    def getSuccess(self):
+        return self.success
 
-	def getContent(self):
-		return self.content
+    def getContent(self):
+        return self.content
 
 
 class Message():
-	def __init__(self, typ, group, username, content, srcIp, srcPort, counter, origin):
-		self.typ = typ
-		self.group = group
-		self.username = username
-		self.content = content
-		self.srcIp = srcIp
-		self.srcPort = srcPort
-		self.counter = counter
-		self.origin = origin
-	
-	def __str__(self):
-		ret = {
-			"Type": self.typ,
-			"Group": self.group,
-			"Username": self.username,
-			"Content": self.content,
-			"SrcIp": self.srcIp,
-			"SrcPort": self.srcPort,
-			"Counter": self.counter,
-			"Origin": self.origin
-		}
+    def __init__(self, typ, group, username, content, srcIp, srcPort, counter, origin):
+        self.typ = typ
+        self.group = group
+        self.username = username
+        self.content = content
+        self.srcIp = srcIp
+        self.srcPort = srcPort
+        self.counter = counter
+        self.origin = origin
 
-		return json.dumps(ret, indent=4)
+    def __str__(self):
+        ret = {
+            "Type": self.typ,
+            "Group": self.group,
+            "Username": self.username,
+            "Content": self.content,
+            "SrcIp": self.srcIp,
+            "SrcPort": self.srcPort,
+            "Counter": self.counter,
+            "Origin": self.origin
+        }
 
-	@classmethod
-	def fromString(cls, rawString):
-		ret = json.loads(rawString)
-		return cls(ret["Type"], ret["Group"], ret["Username"],
-		               ret["Content"], ret["SrcIp"], ret["SrcPort"], ret["Counter"],
-		               ret["Origin"])
+        return json.dumps(ret, indent=4)
 
-	def getType(self):
-		return self.typ
+    @classmethod
+    def fromString(cls, rawString):
+        ret = json.loads(rawString)
+        return cls(ret["Type"], ret["Group"], ret["Username"],
+                   ret["Content"], ret["SrcIp"], ret["SrcPort"], ret["Counter"],
+                   ret["Origin"])
 
-	def getContent(self):
-		return self.content
+    def getType(self):
+        return self.typ
 
-	def getGroupName(self):
-		return self.group
+    def getContent(self):
+        return self.content
 
-	def getSrcAddress(self):
-		return (self.srcIp, self.srcPort)
+    def getGroupName(self):
+        return self.group
 
-	def getUsername(self):
-		return self.username
+    def getSrcAddress(self):
+        return (self.srcIp, self.srcPort)
 
-	def getCounter(self):
-		return self.counter
-	
-	def getOrigin(self):
-		return self.origin
+    def getUsername(self):
+        return self.username
+
+    def getCounter(self):
+        return self.counter
+
+    def getOrigin(self):
+        return self.origin

@@ -12,221 +12,225 @@ from peers import Member, Group, Groups, Members
 
 lg = Logger()
 
+
 class TCPServer:
-	def __init__(self, address, backlog):
-		self.address = address
-		self.backlog = backlog
+    def __init__(self, address, backlog):
+        self.address = address
+        self.backlog = backlog
 
-		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-		try:
-			self.socket.bind(self.address)
-		except socket.error:
-			lg.fatal('port binding failure')
-			sys.exit(1)
+        try:
+            self.socket.bind(self.address)
+        except socket.error:
+            lg.fatal('port binding failure')
+            sys.exit(1)
 
-		self.socket.listen(self.backlog)
+        self.socket.listen(self.backlog)
 
-	def getSocket(self):
-		return self.socket
+    def getSocket(self):
+        return self.socket
 
-	def __enter__(self):
-		return self.socket
+    def __enter__(self):
+        return self.socket
 
-	def __exit__(self, exc_type, exc_val, traceback):
-		self.socket.close()
+    def __exit__(self, exc_type, exc_val, traceback):
+        self.socket.close()
 
 
 class Tracker:
-	def __init__(self, address, backlog, using_seq):
-		self.address = address
-		self.backlog = backlog
-		self.USE_SEQUENCER = using_seq
-		
-		self.groups = Groups()
+    def __init__(self, address, backlog, using_seq):
+        self.address = address
+        self.backlog = backlog
+        self.USE_SEQUENCER = using_seq
 
-		self.members = Members()
+        self.groups = Groups()
 
-		server = TCPServer(self.address, self.backlog)
-		self.sock = server.getSocket()
+        self.members = Members()
 
-		lg.info('tracker listening on %s:%s' % self.address)
+        server = TCPServer(self.address, self.backlog)
+        self.sock = server.getSocket()
 
-	def heartbeatDaemon(self):
-		while True:
-			time.sleep(60)
-			
-			for member in self.members.getMembers():
-				member.decreaseTimeout(60)
+        lg.info('tracker listening on %s:%s' % self.address)
 
-				if member.getTimeout() < 0:
-					self.groups.removeMemberFromAllGroups(member)
-					self.members.deleteMember(member)
+    def heartbeatDaemon(self):
+        while True:
+            time.sleep(60)
 
-	def serve(self):
-		t = Thread(target=self.heartbeatDaemon)
-		t.daemon = True
-		t.start()
+            for member in self.members.getMembers():
+                member.decreaseTimeout(60)
 
-		while True:
-			clientSock, clientAddr = self.sock.accept()
-			lg.debug('connection accepted from ' + clientAddr[0] + ':' + str(clientAddr[1]))
+                if member.getTimeout() < 0:
+                    self.groups.removeMemberFromAllGroups(member)
+                    self.members.deleteMember(member)
 
-			self.handleRequest(clientSock, clientAddr)
+    def serve(self):
+        t = Thread(target=self.heartbeatDaemon)
+        t.daemon = True
+        t.start()
 
-			# thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
+        while True:
+            clientSock, clientAddr = self.sock.accept()
+            lg.debug('connection accepted from ' +
+                     clientAddr[0] + ':' + str(clientAddr[1]))
 
-			# thread.start()
+            self.handleRequest(clientSock, clientAddr)
 
-	def exit(self):
-		self.sock.close()
+            # thread = threading.Thread(target=self.handleRequest, args=(clientSock, clientAddr, ))
 
-	def handleRequest(self, conn, addr):
-		data = conn.recv(4096)
-		
-		if data:
-			req = data.decode()
+            # thread.start()
 
-			lg.debug('received from %s:%s : %s' % (addr[0], str(addr[1]), req))
+    def exit(self):
+        self.sock.close()
 
-			reply = str(self.answer(req))
+    def handleRequest(self, conn, addr):
+        data = conn.recv(4096)
 
-			lg.debug('replying to %s:%s with: %s' % (addr[0], str(addr[1]), reply))
+        if data:
+            req = data.decode()
 
-			reply_raw = reply.encode()
-			conn.sendall(reply_raw)
-			
-		conn.close()
+            lg.debug('received from %s:%s : %s' % (addr[0], str(addr[1]), req))
 
-	def answer(self, message):
-		req = msg.Request.fromString(message)
+            reply = str(self.answer(req))
 
-		reqType = req.getType()
-		reqContent = req.getContent()
+            lg.debug('replying to %s:%s with: %s' %
+                     (addr[0], str(addr[1]), reply))
 
-		if reqType == msg.RequestType.Register:
-			ip = reqContent['Ip']
-			port = reqContent['Port']
-			username = reqContent['Username']
-			
-			member = self.members.getMemberByUsername(username)
-			
-			if member is None:
-				member = Member((ip, port), username)
-				self.members.addNewMember(member)
+            reply_raw = reply.encode()
+            conn.sendall(reply_raw)
 
-			uid = member.getUid()
+        conn.close()
 
-			return msg.Reply(True, uid)
+    def answer(self, message):
+        req = msg.Request.fromString(message)
 
-		if reqType == msg.RequestType.ListGroups:
-			return msg.Reply(True, self.groups.getGroupsSerializable())
+        reqType = req.getType()
+        reqContent = req.getContent()
 
-		if reqType == msg.RequestType.ListMembers:
-			groupname = reqContent['Group']
+        if reqType == msg.RequestType.Register:
+            ip = reqContent['Ip']
+            port = reqContent['Port']
+            username = reqContent['Username']
 
-			group = self.groups.getGroupByName(groupname)
+            member = self.members.getMemberByUsername(username)
 
-			if group is None:
-				return msg.Reply(False, [])
+            if member is None:
+                member = Member((ip, port), username)
+                self.members.addNewMember(member)
 
-			return msg.Reply(True, group.getMembersSerializable())
+            uid = member.getUid()
 
+            return msg.Reply(True, uid)
 
-		if reqType == msg.RequestType.JoinGroup:
-			username = reqContent['Username']
-			groupname = reqContent['Group']
+        if reqType == msg.RequestType.ListGroups:
+            return msg.Reply(True, self.groups.getGroupsSerializable())
 
-			member = self.members.getMemberByUsername(username)
+        if reqType == msg.RequestType.ListMembers:
+            groupname = reqContent['Group']
 
-			if member is None:
-				return msg.Reply(False, [])
-			
-			group = self.groups.getGroupByName(groupname)
+            group = self.groups.getGroupByName(groupname)
 
-			if group is None:
-				group = Group(groupname)
-				self.groups.addNewGroup(group)
-				
-				if self.USE_SEQUENCER:
-					seq = self.members.getMemberByUsername('sequencer')
-					group.addMember(seq)
+            if group is None:
+                return msg.Reply(False, [])
 
-			group.addMember(member)
+            return msg.Reply(True, group.getMembersSerializable())
 
-			return msg.Reply(True, group.getMembersSerializable())
-		
-		if reqType == msg.RequestType.ExitGroup:
-			username = reqContent['Username']
-			groupname = reqContent['Group']
+        if reqType == msg.RequestType.JoinGroup:
+            username = reqContent['Username']
+            groupname = reqContent['Group']
 
-			member = self.members.getMemberByUsername(username)
+            member = self.members.getMemberByUsername(username)
 
-			group = self.groups.getGroupByName(groupname)
+            if member is None:
+                return msg.Reply(False, [])
 
-			if group is not None:
-				group.removeMember(member)
+            group = self.groups.getGroupByName(groupname)
 
-			return msg.Reply(True, '')
+            if group is None:
+                group = Group(groupname)
+                self.groups.addNewGroup(group)
 
-		if reqType == msg.RequestType.Quit:
-			username = reqContent['Username']
+                if self.USE_SEQUENCER:
+                    seq = self.members.getMemberByUsername('sequencer')
+                    group.addMember(seq)
 
-			member = self.members.getMemberByUsername(username)
+            group.addMember(member)
 
-			self.groups.removeMemberFromAllGroups(member)
-				
-			self.members.deleteMember(member)
+            return msg.Reply(True, group.getMembersSerializable())
 
-			return msg.Reply(True, '')
+        if reqType == msg.RequestType.ExitGroup:
+            username = reqContent['Username']
+            groupname = reqContent['Group']
 
-		if reqType == msg.RequestType.Heartbeat:
-			username = reqContent['Username']
+            member = self.members.getMemberByUsername(username)
 
-			member = self.members.getMemberByUsername(username)
-			
-			member.increaseTimeout(60)
+            group = self.groups.getGroupByName(groupname)
 
-			return msg.Reply(True, '')
+            if group is not None:
+                group.removeMember(member)
 
-		return msg.Reply(False, '')
+            return msg.Reply(True, '')
+
+        if reqType == msg.RequestType.Quit:
+            username = reqContent['Username']
+
+            member = self.members.getMemberByUsername(username)
+
+            self.groups.removeMemberFromAllGroups(member)
+
+            self.members.deleteMember(member)
+
+            return msg.Reply(True, '')
+
+        if reqType == msg.RequestType.Heartbeat:
+            username = reqContent['Username']
+
+            member = self.members.getMemberByUsername(username)
+
+            member.increaseTimeout(60)
+
+            return msg.Reply(True, '')
+
+        return msg.Reply(False, '')
 
 
 if __name__ == '__main__':
 
-	parser = argparse.ArgumentParser()
-	parser.add_argument('addr', help="the tracker's address in the \
-	                     form of host:port (e.g. 123.123.123.123:12345)")
-	parser.add_argument('-b', help="backlog of tracker's socket, default is 10", type=int, default=10)
-	parser.add_argument('-v', help='verbose output (use for debugging)', action='store_true', default=False)
-	parser.add_argument('--seq_addr', help="use for total ordering - the sequencer's address in the \
-	                     form of host:port (e.g. 123.123.123.123:12345)")
-	args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('addr', help="the tracker's address in the \
+                         form of host:port (e.g. 123.123.123.123:12345)")
+    parser.add_argument(
+        '-b', help="backlog of tracker's socket, default is 10", type=int, default=10)
+    parser.add_argument('-v', help='verbose output (use for debugging)',
+                        action='store_true', default=False)
+    parser.add_argument('--seq_addr', help="use for total ordering - the sequencer's address in the \
+                         form of host:port (e.g. 123.123.123.123:12345)")
+    args = parser.parse_args()
 
-	addr = args.addr.split(':')
-	TRACKER_ADDR = (addr[0], int(addr[1]))
-	TRACKER_BACKLOG = args.b
+    addr = args.addr.split(':')
+    TRACKER_ADDR = (addr[0], int(addr[1]))
+    TRACKER_BACKLOG = args.b
 
-	if args.v:
-		lg.setDEBUG()
+    if args.v:
+        lg.setDEBUG()
 
-	USE_SEQUENCER = args.seq_addr is not None
-	if USE_SEQUENCER:
-		addr = args.seq_addr.split(':')
-		SEQUENCER_ADDR = (addr[0], int(addr[1]))
-		lg.info('using sequencer on %s:%s' % SEQUENCER_ADDR)
+    USE_SEQUENCER = args.seq_addr is not None
+    if USE_SEQUENCER:
+        addr = args.seq_addr.split(':')
+        SEQUENCER_ADDR = (addr[0], int(addr[1]))
+        lg.info('using sequencer on %s:%s' % SEQUENCER_ADDR)
 
-	tracker = Tracker(TRACKER_ADDR, TRACKER_BACKLOG, USE_SEQUENCER)
+    tracker = Tracker(TRACKER_ADDR, TRACKER_BACKLOG, USE_SEQUENCER)
 
-	def sig_handler(sig, frame):
-		lg.info('exiting...')
-		tracker.exit()
-		sys.exit(0)
+    def sig_handler(sig, frame):
+        lg.info('exiting...')
+        tracker.exit()
+        sys.exit(0)
 
-	signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGINT, sig_handler)
 
-	if USE_SEQUENCER:
-		tracker.members.addNewMember(Member(SEQUENCER_ADDR, 'sequencer'))
+    if USE_SEQUENCER:
+        tracker.members.addNewMember(Member(SEQUENCER_ADDR, 'sequencer'))
 
-	tracker.serve()
+    tracker.serve()
